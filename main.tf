@@ -3,7 +3,7 @@ locals {
   deny_root_api_calls_statement = var.deny_root_api_calls ? [""] : []
   require_imdsv2_statement      = var.require_imdsv2 ? [""] : []
   deny_imds_change_statement    = var.deny_imds_change ? [""] : []
-  enabled_region_statement      = var.enabled_regions ? [""] : []
+  enabled_regions_statement     = var.enabled_regions_policy ? [""] : []
 }
 
 #
