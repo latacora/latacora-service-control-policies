@@ -37,6 +37,12 @@ variable "deny_imds_change" {
   type        = bool
 }
 
+variable "enabled_regions_policy" {
+  description = "enable specific regions?"
+  default     = true
+  type        = bool
+}
+
 variable "enabled_regions" {
   description = "List of regions that are allowed"
   type        = list(string)
