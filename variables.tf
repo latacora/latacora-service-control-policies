@@ -11,16 +11,9 @@ variable "deny_leaving_orgs" {
   type        = bool
 }
 
-variable "deny_root_api_calls" {
-  description = "Deny api calls made from the root user"
-  default     = false
-  type        = bool
-}
-
-
 variable "deny_cloudtrail_changes" {
-  description = "Disrupts ability from deleting, stopping and updating cloudtrail"
-  default     = false
+  description = "Blocks CloudTrail ability from deleting, stopping and updating cloudtrail"
+  default     = true
   type        = bool
 }
 
