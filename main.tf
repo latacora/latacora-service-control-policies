@@ -1,6 +1,6 @@
 locals {
   deny_leaving_orgs_statement   = var.deny_leaving_orgs ? [""] : []
-  deny_root_api_calls_statement = var.deny_root_api_calls ? [""] : []
+  deny_cloudtrail_changes_statement = var.deny_cloudtrail_changes ? [""] : []
   require_imdsv2_statement      = var.require_imdsv2 ? [""] : []
   deny_imds_change_statement    = var.deny_imds_change ? [""] : []
   enabled_regions_statement     = var.enabled_regions_policy ? [""] : []
@@ -25,15 +25,16 @@ data "aws_iam_policy_document" "combined_policy_block" {
   }
 
   dynamic "statement" {
-    for_each = local.deny_root_api_calls_statement
+    for_each = local.deny_cloudtrail_changes_statement
     content {
-      sid       = "DenyRootUser"
+      sid       = "DenyCloudtrailChanges"
       effect    = "Deny"
-      actions   = "*"
-      resources = "*"
-      conditions = {
-        stringlike = { "aws:PrincipalArn" : "arn:aws:iam::*:root" }
-      }
+      actions   = ["cloudtrail:AddTags",
+                   "cloudtrail:DeleteTrail",
+                   "cloudtrail:RemoveTags",
+                   "cloudtrail:StopLogging",
+                   "cloudtrail:UpdateTrail"]
+      resources = ["*"]
     }
   }
 
