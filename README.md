@@ -18,15 +18,15 @@ Note: These policies may prevent infrastructure from being deployed by IaC tools
 
 This policy includes: 
  * EC2
-  * Require Instance Metadata Service V2 
-  * EBS Volumes are encrypted
-  * EBS Snapshots are encrypted 
+    * Require Instance Metadata Service V2 
+    * EBS Volumes are encrypted
+    * EBS Snapshots are encrypted 
  * S3
-  * Default encryption is enabled
-  * Bucket policy requires HTTPS
-  * Buckets are not public
+    * Default encryption is enabled
+    * Bucket policy requires HTTPS
+    * Buckets are not public
  * RDS
-  * RDS Snapshots are encrypted
+    * RDS Snapshots are encrypted
 
 ### IG 3 - Specialized SCPs 
 These policies will be specific to the needs to the environment...
