@@ -5,9 +5,9 @@ locals {
   deny_imds_change_statement        = var.deny_imds_change ? [""] : []
   enabled_regions_statement         = var.enabled_regions_policy ? [""] : []
   require_ebs_encryption_statement  = var.require_ebs_encryption ? [""] : []
-  require_s3_encryption_statement   = var.require_s3_encryption_statement ? [""] : []
+  require_s3_encryption_statement   = var.require_s3_encryption ? [""] : []
   require_s3_bucket_https_statement = var.require_s3_bucket_https ? [""] : []
-  deny_s3_public_access_statement   = var.deny_s3_public_access_statement ? [""] : []
+  deny_s3_public_access_statement   = var.deny_s3_public_access ? [""] : []
 }
 
 #
