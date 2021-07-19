@@ -4,6 +4,10 @@ locals {
   require_imdsv2_statement          = var.require_imdsv2 ? [""] : []
   deny_imds_change_statement        = var.deny_imds_change ? [""] : []
   enabled_regions_statement         = var.enabled_regions_policy ? [""] : []
+  require_ebs_encryption_statement  = var.require_ebs_encryption ? [""] : []
+  require_s3_encryption_statement   = var.require_s3_encryption_statement ? [""] : []
+  require_s3_bucket_https_statement = var.require_s3_bucket_https ? [""] : []
+  deny_s3_public_access_statement   = var.deny_s3_public_access_statement ? [""] : []
 }
 
 #
@@ -30,10 +34,10 @@ data "aws_iam_policy_document" "combined_policy_block" {
       sid    = "DenyCloudtrailChanges"
       effect = "Deny"
       actions = ["cloudtrail:AddTags",
-        "cloudtrail:DeleteTrail",
-        "cloudtrail:RemoveTags",
-        "cloudtrail:StopLogging",
-      "cloudtrail:UpdateTrail"]
+                 "cloudtrail:DeleteTrail",
+                 "cloudtrail:RemoveTags",
+                 "cloudtrail:StopLogging",
+                 "cloudtrail:UpdateTrail"]
       resources = ["*"]
     }
   }
@@ -120,6 +124,62 @@ data "aws_iam_policy_document" "combined_policy_block" {
         variable = "aws:RequestedRegion"
         values   = var.enabled_regions
       }
+    }
+  }
+
+  dynamic "statement" {
+    for_each = local.require_ebs_encryption_statement
+    content {
+      sid       = "RequireEBSEncryption"
+      effect    = "Deny"
+      actions   = "ec2:*"
+      resources = ["arn:aws:ec2:*:*:volume/*",
+                   "arn:aws:ec2:*:*:snapshot/*"]
+      conditions = {
+        stringlike = { "ebs:Encrypted" : "false" }
+      }
+    }
+  }
+
+  dynamic "statement" {
+    for_each = local.require_s3_encryption_statement
+    content {
+      sid       = "RequireS3DefaultEncryption"
+      effect    = "Deny"
+      actions   = "s3:*"
+      resources = ["*"]
+      condition {
+        test     = "StringNotEquals"
+        variable = "s3:x-amz-server-side-encryption"
+        values   = ["AES256", "aws:kms"]
+      }
+    }
+  }
+
+  dynamic "statement" {
+    for_each = local.require_s3_bucket_https_statement
+    content {
+      sid       = "RequireS3BucketHTTPS"
+      effect    = "Deny"
+      actions   = "s3:*"
+      resources = ["*"]
+      condition {
+        test     = "Bool"
+        variable = "aws:SecureTransport"
+        values   = ["true"]
+      }
+    }
+  }
+
+  dynamic "statement" {
+    for_each = local.deny_s3_public_access_statement
+    content {
+      sid       = "DenyPublicAccesstoS3Buckets"
+      effect    = "Deny"
+      actions   = ["s3:PutPublicAccessBlock",
+                   "s3:GetPublicAccessBlock",
+                   "s3:DeletePublicAccessBlock"]
+      resources = ["*"]
     }
   }
 }

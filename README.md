@@ -5,7 +5,7 @@ There are three groups of Serive Control Policies that latacora recommends putti
 These Policies are meant to be implemented at the root organizational unit as they will harden the security of the account as well as enforce security best practices when it comes to the infrastructure that is being deployed. 
 
 #### Security Best Practices
-This security hardening forcused set of SCPs is designed to limit the attack surface of the AWS environment as well as harden the most important actions that can be taken in an account. 
+This security hardening focused set of SCPs is designed to limit the attack surface of the AWS environment as well as harden the most important actions that can be taken in an account. 
 
 This policy includes: 
 * Disabling an account from leaving the organization
