@@ -64,3 +64,9 @@ variable "deny_s3_public_access" {
   default     = true
   type        = bool
 }
+
+variable "require_rds_encryption" {
+  description = "Requires RDS encryption"
+  default     = true
+  type        = bool
+}

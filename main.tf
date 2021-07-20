@@ -8,6 +8,7 @@ locals {
   require_s3_encryption_statement   = var.require_s3_encryption ? [""] : []
   require_s3_bucket_https_statement = var.require_s3_bucket_https ? [""] : []
   deny_s3_public_access_statement   = var.deny_s3_public_access ? [""] : []
+  require_rds_encryption_statemnet  = var.require_rds_encryption ? [""] : []
 }
 
 #
@@ -31,9 +32,9 @@ data "aws_iam_policy_document" "combined_policy_block" {
   dynamic "statement" {
     for_each = local.deny_cloudtrail_changes_statement
     content {
-      sid    = "DenyCloudtrailChanges"
-      effect = "Deny"
-      actions = ["cloudtrail:AddTags",
+      sid       = "DenyCloudtrailChanges"
+      effect    = "Deny"
+      actions   = ["cloudtrail:AddTags",
                  "cloudtrail:DeleteTrail",
                  "cloudtrail:RemoveTags",
                  "cloudtrail:StopLogging",
@@ -49,8 +50,10 @@ data "aws_iam_policy_document" "combined_policy_block" {
       effect    = "Deny"
       actions   = "ec2:RunInstances"
       resources = ["arn:aws:ec2:*:*:instance/*"]
-      conditions = {
-        stringlike = { "ec2:MetadataHttpTokens" : "required" }
+      condition {
+        test     = "StringLike"
+        variable = "ec2:MetadataHttpsTokens"
+        values   = ["required"]
       }
     }
   }
@@ -135,8 +138,10 @@ data "aws_iam_policy_document" "combined_policy_block" {
       actions   = "ec2:*"
       resources = ["arn:aws:ec2:*:*:volume/*",
                    "arn:aws:ec2:*:*:snapshot/*"]
-      conditions = {
-        stringlike = { "ebs:Encrypted" : "false" }
+      condition {
+        test     = "Bool"
+        variable = "ec2:Encrypted"
+        values   = [false]
       }
     }
   }
@@ -166,7 +171,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
       condition {
         test     = "Bool"
         variable = "aws:SecureTransport"
-        values   = ["true"]
+        values   = [false]
       }
     }
   }
@@ -180,6 +185,21 @@ data "aws_iam_policy_document" "combined_policy_block" {
                    "s3:GetPublicAccessBlock",
                    "s3:DeletePublicAccessBlock"]
       resources = ["*"]
+    }
+  }
+
+  dynamic "statement" {
+    for_each = local.require_rds_encryption_statement
+    content {
+      sid       = "RequireRDSEncryption"
+      effect    = "Deny"
+      actions   = "rds:*"
+      resources = ["*"]
+      condition {
+        test     = "Bool"
+        variable = "rds:StorageEncrypted"
+        values   = [false]
+      }
     }
   }
 }
