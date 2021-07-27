@@ -32,13 +32,13 @@ data "aws_iam_policy_document" "combined_policy_block" {
   dynamic "statement" {
     for_each = local.deny_cloudtrail_changes_statement
     content {
-      sid       = "DenyCloudtrailChanges"
-      effect    = "Deny"
-      actions   = ["cloudtrail:AddTags",
-                 "cloudtrail:DeleteTrail",
-                 "cloudtrail:RemoveTags",
-                 "cloudtrail:StopLogging",
-                 "cloudtrail:UpdateTrail"]
+      sid    = "DenyCloudtrailChanges"
+      effect = "Deny"
+      actions = ["cloudtrail:AddTags",
+        "cloudtrail:DeleteTrail",
+        "cloudtrail:RemoveTags",
+        "cloudtrail:StopLogging",
+      "cloudtrail:UpdateTrail"]
       resources = ["*"]
     }
   }
@@ -133,11 +133,11 @@ data "aws_iam_policy_document" "combined_policy_block" {
   dynamic "statement" {
     for_each = local.require_ebs_encryption_statement
     content {
-      sid       = "RequireEBSEncryption"
-      effect    = "Deny"
-      actions   = "ec2:*"
+      sid     = "RequireEBSEncryption"
+      effect  = "Deny"
+      actions = "ec2:CreateVolume"
       resources = ["arn:aws:ec2:*:*:volume/*",
-                   "arn:aws:ec2:*:*:snapshot/*"]
+      "arn:aws:ec2:*:*:snapshot/*"]
       condition {
         test     = "Bool"
         variable = "ec2:Encrypted"
@@ -179,11 +179,11 @@ data "aws_iam_policy_document" "combined_policy_block" {
   dynamic "statement" {
     for_each = local.deny_s3_public_access_statement
     content {
-      sid       = "DenyPublicAccesstoS3Buckets"
-      effect    = "Deny"
-      actions   = ["s3:PutPublicAccessBlock",
-                   "s3:GetPublicAccessBlock",
-                   "s3:DeletePublicAccessBlock"]
+      sid    = "DenyPublicAccesstoS3Buckets"
+      effect = "Deny"
+      actions = ["s3:PutPublicAccessBlock",
+        "s3:GetPublicAccessBlock",
+      "s3:DeletePublicAccessBlock"]
       resources = ["*"]
     }
   }
