@@ -13,7 +13,7 @@ variable "deny_leaving_orgs" {
 
 variable "deny_cloudtrail_changes" {
   description = "Blocks CloudTrail ability from deleting, stopping and updating cloudtrail"
-  default     = true
+  default     = false
   type        = bool
 }
 
@@ -22,7 +22,6 @@ variable "require_imdsv2" {
   default     = true
   type        = bool
 }
-
 
 variable "deny_imds_change" {
   description = "Disallows changes to IMDS on instances"
@@ -61,7 +60,7 @@ variable "require_s3_bucket_https" {
 
 variable "deny_s3_public_access" {
   description = "Denies public access to s3 buckets"
-  default     = true
+  default     = false
   type        = bool
 }
 
