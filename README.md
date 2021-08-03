@@ -22,7 +22,8 @@ This policy includes:
     * EBS Volumes are encrypted
     * EBS Snapshots are encrypted 
  * S3
-    * Default encryption is enabled
+    * Require object Encryption
+    * Default S3 Encryption Enabled
     * Bucket policy requires HTTPS
     * Buckets are not public
  * RDS

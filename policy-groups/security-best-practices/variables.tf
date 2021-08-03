@@ -11,7 +11,19 @@ variable "deny_leaving_orgs" {
 }
 
 variable "deny_cloudtrail_changes" {
-  description = "Blocks CloudTrail ability from deleting, stopping and updating cloudtrail"
+  description = "Denies access to deleting, updating, or stoppng Cloudtrail"
+  default     = true
+  type        = bool
+}
+
+variable "deny_billing_changes" {
+  description = "Denies access to make billing changes"
+  default     = true
+  type        = bool
+}
+
+variable "deny_account_changes" {
+  description = "Denies access to make account changes"
   default     = true
   type        = bool
 }

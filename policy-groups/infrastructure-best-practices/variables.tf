@@ -21,8 +21,8 @@ variable "require_ebs_encryption" {
   type        = bool
 }
 
-variable "require_s3_encryption" {
-  description = "Requires s3 default encryption"
+variable "require_s3_object_encryption" {
+  description = "Requires s3 object encryption"
   default     = true
   type        = bool
 }

@@ -1,11 +1,11 @@
 locals {
-  require_imdsv2_statement          = var.require_imdsv2 ? [""] : []
-  deny_imds_change_statement        = var.deny_imds_change ? [""] : []
-  require_ebs_encryption_statement  = var.require_ebs_encryption ? [""] : []
-  require_s3_encryption_statement   = var.require_s3_encryption ? [""] : []
-  require_s3_bucket_https_statement = var.require_s3_bucket_https ? [""] : []
-  deny_s3_public_access_statement   = var.deny_s3_public_access ? [""] : []
-  require_rds_encryption_statement  = var.require_rds_encryption ? [""] : []
+  require_imdsv2_statement               = var.require_imdsv2 ? [""] : []
+  deny_imds_change_statement             = var.deny_imds_change ? [""] : []
+  require_ebs_encryption_statement       = var.require_ebs_encryption ? [""] : []
+  require_s3_object_encryption_statement = var.require_s3_object_encryption ? [""] : []
+  require_s3_bucket_https_statement      = var.require_s3_bucket_https ? [""] : []
+  deny_s3_public_access_statement        = var.deny_s3_public_access ? [""] : []
+  require_rds_encryption_statement       = var.require_rds_encryption ? [""] : []
 }
 
 data "aws_iam_policy_document" "combined_policy_block" {
@@ -18,7 +18,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
       actions   = ["ec2:RunInstances"]
       resources = ["arn:aws:ec2:*:*:instance/*"]
       condition {
-        test     = "StringLike"
+        test     = "StringNotEquals"
         variable = "ec2:MetadataHttpsTokens"
         values   = ["required"]
       }
@@ -38,11 +38,9 @@ data "aws_iam_policy_document" "combined_policy_block" {
   dynamic "statement" {
     for_each = local.require_ebs_encryption_statement
     content {
-      sid    = "RequireEBSEncryption"
-      effect = "Deny"
-      actions = ["ec2:CreateVolume",
-        "ec2:CreateSnapshot",
-      "ec2:CreateSnapshots"]
+      sid       = "RequireEBSEncryption"
+      effect    = "Deny"
+      actions   = ["ec2:CreateVolume", ]
       resources = ["*"]
       condition {
         test     = "Bool"
@@ -53,17 +51,23 @@ data "aws_iam_policy_document" "combined_policy_block" {
   }
 
   dynamic "statement" {
-    for_each = local.require_s3_encryption_statement
+    for_each = local.require_s3_object_encryption_statement
     content {
-      sid    = "RequireS3DefaultEncryption"
-      effect = "Deny"
-      actions = ["s3:CreateBucket",
-      "s3:PutBucketEncryption"]
-      resources = ["*"]
+      sid       = "RequireObjectEncryption"
+      effect    = "Deny"
+      actions   = ["s3:PutObject"]
+      resources = ["arn:aws:s3:::*/*"]
+
       condition {
         test     = "ForAllValues:StringNotEquals"
         variable = "s3:x-amz-server-side-encryption"
         values   = ["AES256", "aws:kms"]
+      }
+
+      condition {
+        test     = "Null"
+        variable = "s3:x-amz-server-side-encryption"
+        values   = ["true"]
       }
     }
   }
@@ -86,12 +90,12 @@ data "aws_iam_policy_document" "combined_policy_block" {
   dynamic "statement" {
     for_each = local.deny_s3_public_access_statement
     content {
-      sid    = "DenyPublicAccesstoS3Buckets"
-      effect = "Deny"
-      actions = ["s3:PutPublicAccessBlock",
-      "s3:GetPublicAccessBlock"]
+      sid       = "DenyPublicAccesstoS3Buckets"
+      effect    = "Deny"
+      actions   = ["s3:PutPublicAccessBlock"]
       resources = ["*"]
     }
+
   }
 
   dynamic "statement" {

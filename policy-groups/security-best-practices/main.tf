@@ -2,6 +2,8 @@ locals {
   deny_leaving_orgs_statement       = var.deny_leaving_orgs ? [""] : []
   deny_cloudtrail_changes_statement = var.deny_cloudtrail_changes ? [""] : []
   enabled_regions_statement         = var.enabled_regions_policy ? [""] : []
+  deny_billing_changes_statement    = var.deny_billing_changes ? [""] : []
+  deny_account_changes_statement    = var.deny_account_changes ? [""] : []
 }
 
 #
@@ -95,6 +97,28 @@ data "aws_iam_policy_document" "combined_policy_block" {
         variable = "aws:RequestedRegion"
         values   = var.enabled_regions
       }
+    }
+  }
+
+
+  dynamic "statement" {
+    for_each = local.deny_billing_changes_statement
+    content {
+      sid    = "DenyBillingChanges"
+      effect = "Deny"
+      actions = ["aws-portal:ModifyBilling",
+      "aws-portal:ModifyPaymentMethods"]
+      resources = ["*"]
+    }
+  }
+
+  dynamic "statement" {
+    for_each = local.deny_account_changes_statement
+    content {
+      sid       = "DenyAccountChanges"
+      effect    = "Deny"
+      actions   = ["aws-portal:ModifyAccount"]
+      resources = ["*"]
     }
   }
 
