@@ -35,7 +35,7 @@ variable "require_s3_bucket_https" {
 
 variable "deny_s3_public_access" {
   description = "Denies public access to s3 buckets"
-  default     = false
+  default     = true
   type        = bool
 }
 

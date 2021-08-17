@@ -77,7 +77,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
     content {
       sid       = "RequireS3BucketHTTPS"
       effect    = "Deny"
-      actions   = ["s3:PutBucketPolicy"]
+      actions   = ["s3:*"]
       resources = ["*"]
       condition {
         test     = "Bool"
@@ -92,7 +92,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
     content {
       sid       = "DenyPublicAccesstoS3Buckets"
       effect    = "Deny"
-      actions   = ["s3:PutPublicAccessBlock"]
+      actions   = ["s3:putBucketPublicAccessBlock"]
       resources = ["*"]
     }
 
@@ -101,9 +101,44 @@ data "aws_iam_policy_document" "combined_policy_block" {
   dynamic "statement" {
     for_each = local.require_rds_encryption_statement
     content {
-      sid       = "RequireRDSEncryption"
+      sid       = "DenyNotAuroraDBInstance"
       effect    = "Deny"
-      actions   = ["rds:CreateDBInstance"]
+      actions   = ["rds:CreateDBInstance", ]
+      resources = ["*"]
+
+      condition {
+        test     = "ForAnyValue:StringEquals"
+        variable = "rds:DatabaseEngine"
+        values = [
+          "mariadb",
+          "mysql",
+          "oracle-ee",
+          "oracle-se2",
+          "oracle-se1",
+          "oracle-se",
+          "postgres",
+          "sqlserver-ee",
+          "sqlserver-se",
+          "sqlserver-ex",
+        "sqlserver-web"]
+      }
+
+      condition {
+        test     = "Bool"
+        variable = "rds:StorageEncrypted"
+        values   = [false]
+      }
+
+    }
+
+  }
+
+  dynamic "statement" {
+    for_each = local.require_rds_encryption_statement
+    content {
+      sid       = "DenyAuroraDatabaseCluster"
+      effect    = "Deny"
+      actions   = ["rds:CreateDBCluster"]
       resources = ["*"]
       condition {
         test     = "Bool"
@@ -112,6 +147,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
       }
     }
   }
+
 }
 
 resource "aws_organizations_policy" "infrastructure_hardened_policy" {
@@ -125,3 +161,4 @@ resource "aws_organizations_policy_attachment" "policy_attachment" {
   policy_id = aws_organizations_policy.infrastructure_hardened_policy.id
   target_id = var.target_ou_id
 }
+

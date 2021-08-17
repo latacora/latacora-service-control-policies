@@ -8,9 +8,11 @@ These Policies are meant to be implemented at the root organizational unit as th
 This security hardening focused set of SCPs is designed to limit the attack surface of the AWS environment as well as harden the most important actions that can be taken in an account. 
 
 This policy includes: 
-* Disabling an account from leaving the organization
-* Disabling changes being made to the Organizational Cloudtrail Trail
-* Enabling only regions that are meant to be used
+* Disable an account from leaving the organization
+* Disable changes being made to the Organizational Cloudtrail Trail
+* Enable only regions that are meant to be used
+* Disable Billing Changes 
+* Disable Account Changes
 
 #### Infrastructure Configuration Controls
 This set of SCPs is more focused on ensuring that the infrastructure that gets created in the account meets best practices at a service level. 
@@ -20,14 +22,12 @@ This policy includes:
  * EC2
     * Require Instance Metadata Service V2 
     * EBS Volumes are encrypted
-    * EBS Snapshots are encrypted 
  * S3
-    * Require object Encryption
-    * Default S3 Encryption Enabled
+    * Require object encryption
     * Bucket policy requires HTTPS
-    * Buckets are not public
+    * Deny changes to S3 Public Access
  * RDS
-    * RDS Snapshots are encrypted
+    * RDS database encryption is enabled
 
 ### IG 3 - Specialized SCPs 
 These policies will be specific to the needs to the environment...
