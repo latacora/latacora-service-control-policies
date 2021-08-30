@@ -7,6 +7,12 @@ These Policies are meant to be implemented at the root organizational unit as th
 #### Security Best Practices
 This security hardening focused set of SCPs is designed to limit the attack surface of the AWS environment as well as harden the most important actions that can be taken in an account. 
 
+This module includes the following SCPs: 
+| Service     | SCP Name    | Effect | Implementation Reasoning|
+| ----------- | ----------- | ------ | ----------------------- | 
+| Account     | DisableOrgs |     Disable an account from leaving the organization | There are very few cases where you would want to have an AWS Account leave the organization. In those cases it makes sense to temporarily disable the SCP effect from the account in order to make it happen. 
+| Cloudtrail   | DisableCloudtrail | Disable changes being made to the Organizational Cloudtrail Trail | Once a separate account has been created and Organizational Cloudtrail has been set up, lock access down so no tampering can be done with the logs
+
 This policy includes: 
 * Disable an account from leaving the organization
 * Disable changes being made to the Organizational Cloudtrail Trail
@@ -14,9 +20,16 @@ This policy includes:
 * Disable Billing Changes 
 * Disable Account Changes
 
-#### Infrastructure Configuration Controls
+#### Infrastructure Best Practices
 This set of SCPs is more focused on ensuring that the infrastructure that gets created in the account meets best practices at a service level. 
 Note: These policies may prevent infrastructure from being deployed by IaC tools when the configurations are not complete with the correct settings enabled. 
+
+
+This module includes the following SCPs: 
+| Service     | SCP Name    | Effect | Implementation Reasoning|
+| ----------- | ----------- | ------ | ----------------------- | 
+| Account     | DisableOrgs |     Disable an account from leaving the organization | There are very few cases where you would want to have an AWS Account leave the organization. In those cases it makes sense to temporarily disable the SCP effect from the account in order to make it happen. 
+| Cloudtrail   | DisableCloudtrail | Disable changes being made to the Organizational Cloudtrail Trail | Once a separate account has been created and Organizational Cloudtrail has been set up, lock access down so no tampering can be done with the logs
 
 This policy includes: 
  * EC2
