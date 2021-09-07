@@ -11,7 +11,7 @@ variable "require_imdsv2" {
 
 variable "deny_imds_change" {
   description = "Disallows changes to IMDS on instances"
-  default     = false
+  default     = true
   type        = bool
 }
 
