@@ -33,7 +33,7 @@ This module includes the following SCPs:
 | RDS         | RequireRDSEncryption | Prevents creating an RDS database instance or cluster unless encryption is enabled for the database storage volumes | Enabling encryption of RDS instance volumes ensures that data is encrypted at rest. This may prevent an attacker that gains access to the underlying physical storage systems where this data is hosted from accessing the data associated with the instance. Encryption of this data may also be a requirement in certain compliance regimes.
 
 ### IG 3 - Specialized SCPs 
-These policies will be specific to the needs to the environment...
+These policies will be specific to the needs to the environment. For now, we will not be releasing these as they require more input and surrounding infrastucture. You can expect them in the future.
 
 ### Deployment
 We have created this terraform repo in order to speed up the deployment process of these SCPs. 
@@ -42,8 +42,8 @@ We have created this terraform repo in order to speed up the deployment process 
 1.0.0
 
 #### Required Variables
-Organizational Unit Id: What OU are you attaching the SCPs to? 
-Enabled Regions: A list of regions that you want to allow resources to be deployed in. For example: `["us-east-1", "us-west-2"]`
+Organizational Unit Id: What OU are you attaching the SCPs to?  
+Enabled Regions: A list of regions that you want to allow resources to be deployed in. For example: `["us-east-1", "us-west-2"]`  
 
 #### Disabling policy statement
 In order to disable specific policy statements in the SCP, change the default type in the variables.tf file inside the policy-groups/{security,infrastructure}-best-practices/ folder from `true` to `false` in the variable block associated with the policy statement that needs to be disabled. 
