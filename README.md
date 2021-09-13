@@ -76,6 +76,7 @@ Although these are the Latacora recommended SCPs, we did not come up with them a
 * https://summitroute.com/blog/2020/03/25/aws_scp_best_practices/
 * https://github.com/ScaleSec/terraform_aws_scp/tree/main/security_controls_scp
 * https://github.com/trussworks/terraform-aws-ou-scp
+* https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps_examples.html
 
 ### Feedback
 
