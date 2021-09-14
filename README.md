@@ -69,6 +69,15 @@ Steps:
 
 Note: This comes with the assumption that you have valid AWS credentials to the Management account where SCPs are managed. It also assumes you know a bit about terraform and storing state, but in the case of this module it's all SCP related so not too bad if you have to destroy things if the state gets lost. 
 
+### References
+Although these are the Latacora recommended SCPs, we did not come up with them all alone. We used resources available on blogs, documentation sites, and AWS official user guides to craft our recommendations. There are many more SCPs available linked below and we encourage you to check them out.  
+* https://cloudsecdocs.com/aws/devops/resources/scps/
+* https://asecure.cloud/p/scp_package/
+* https://summitroute.com/blog/2020/03/25/aws_scp_best_practices/
+* https://github.com/ScaleSec/terraform_aws_scp/tree/main/security_controls_scp
+* https://github.com/trussworks/terraform-aws-ou-scp
+* https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps_examples.html
+
 ### Feedback
 
 Feedback is always welcome. If you run into issues feel free to open a GitHub issue and we will take a look.
