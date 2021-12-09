@@ -19,7 +19,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
       resources = ["arn:aws:ec2:*:*:instance/*"]
       condition {
         test     = "StringNotEquals"
-        variable = "ec2:MetadataHttpsTokens"
+        variable = "ec2:MetadataHttpTokens"
         values   = ["required"]
       }
     }
