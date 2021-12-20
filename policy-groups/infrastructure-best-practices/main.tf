@@ -92,7 +92,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
     content {
       sid       = "DenyPublicAccesstoS3Buckets"
       effect    = "Deny"
-      actions   = ["s3:putBucketPublicAccessBlock"]
+      actions   = ["s3:PutAccountPublicAccessBlock"]
       resources = ["*"]
     }
 
