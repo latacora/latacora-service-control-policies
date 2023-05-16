@@ -16,6 +16,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
   #
   dynamic "statement" {
     for_each = local.deny_leaving_orgs_statement
+
     content {
       sid       = "DenyLeavingOrgs"
       effect    = "Deny"
@@ -26,24 +27,27 @@ data "aws_iam_policy_document" "combined_policy_block" {
 
   dynamic "statement" {
     for_each = local.deny_cloudtrail_changes_statement
+
     content {
       sid    = "DenyCloudtrailChanges"
       effect = "Deny"
-      actions = ["cloudtrail:AddTags",
+      actions = [
+        "cloudtrail:AddTags",
         "cloudtrail:DeleteTrail",
         "cloudtrail:RemoveTags",
         "cloudtrail:StopLogging",
-      "cloudtrail:UpdateTrail"]
+        "cloudtrail:UpdateTrail",
+      ]
       resources = ["*"]
     }
   }
 
   dynamic "statement" {
     for_each = local.enabled_regions_statement
+
     content {
       sid    = "EnabledRegions"
       effect = "Deny"
-
       # These actions do not operate in a specific region, or only run in
       # a single region, so we don't want to try restricting them by region.
       # List of actions can be found in the following example:
@@ -87,7 +91,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
         "waf-regional:*",
         "waf:*",
         "wafv2:*",
-        "wellarchitected:*"
+        "wellarchitected:*",
       ]
 
       resources = ["*"]
@@ -100,20 +104,23 @@ data "aws_iam_policy_document" "combined_policy_block" {
     }
   }
 
-
   dynamic "statement" {
     for_each = local.deny_billing_changes_statement
+
     content {
       sid    = "DenyBillingChanges"
       effect = "Deny"
-      actions = ["aws-portal:ModifyBilling",
-      "aws-portal:ModifyPaymentMethods"]
+      actions = [
+        "aws-portal:ModifyBilling",
+        "aws-portal:ModifyPaymentMethods",
+      ]
       resources = ["*"]
     }
   }
 
   dynamic "statement" {
     for_each = local.deny_account_changes_statement
+
     content {
       sid       = "DenyAccountChanges"
       effect    = "Deny"
@@ -121,7 +128,6 @@ data "aws_iam_policy_document" "combined_policy_block" {
       resources = ["*"]
     }
   }
-
 }
 
 resource "aws_organizations_policy" "security_hardened_policy" {

@@ -9,14 +9,15 @@ locals {
 }
 
 data "aws_iam_policy_document" "combined_policy_block" {
-
   dynamic "statement" {
     for_each = local.require_imdsv2_statement
+
     content {
       sid       = "RequireIMDSv2"
       effect    = "Deny"
       actions   = ["ec2:RunInstances"]
       resources = ["arn:aws:ec2:*:*:instance/*"]
+
       condition {
         test     = "StringNotEquals"
         variable = "ec2:MetadataHttpTokens"
@@ -27,6 +28,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
 
   dynamic "statement" {
     for_each = local.deny_imds_change_statement
+
     content {
       sid       = "DenyIMDSChanges"
       effect    = "Deny"
@@ -37,11 +39,13 @@ data "aws_iam_policy_document" "combined_policy_block" {
 
   dynamic "statement" {
     for_each = local.require_ebs_encryption_statement
+
     content {
       sid       = "RequireEBSEncryption"
       effect    = "Deny"
       actions   = ["ec2:CreateVolume", ]
       resources = ["*"]
+
       condition {
         test     = "Bool"
         variable = "ec2:Encrypted"
@@ -52,6 +56,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
 
   dynamic "statement" {
     for_each = local.require_s3_object_encryption_statement
+
     content {
       sid       = "RequireObjectEncryption"
       effect    = "Deny"
@@ -74,11 +79,13 @@ data "aws_iam_policy_document" "combined_policy_block" {
 
   dynamic "statement" {
     for_each = local.require_s3_bucket_https_statement
+
     content {
       sid       = "RequireS3BucketHTTPS"
       effect    = "Deny"
       actions   = ["s3:*"]
       resources = ["*"]
+
       condition {
         test     = "Bool"
         variable = "aws:SecureTransport"
@@ -89,21 +96,22 @@ data "aws_iam_policy_document" "combined_policy_block" {
 
   dynamic "statement" {
     for_each = local.deny_s3_public_access_statement
+
     content {
       sid       = "DenyPublicAccesstoS3Buckets"
       effect    = "Deny"
       actions   = ["s3:PutAccountPublicAccessBlock"]
       resources = ["*"]
     }
-
   }
 
   dynamic "statement" {
     for_each = local.require_rds_encryption_statement
+
     content {
       sid       = "DenyNotAuroraDBInstance"
       effect    = "Deny"
-      actions   = ["rds:CreateDBInstance", ]
+      actions   = ["rds:CreateDBInstance"]
       resources = ["*"]
 
       condition {
@@ -113,14 +121,15 @@ data "aws_iam_policy_document" "combined_policy_block" {
           "mariadb",
           "mysql",
           "oracle-ee",
-          "oracle-se2",
-          "oracle-se1",
           "oracle-se",
+          "oracle-se1",
+          "oracle-se2",
           "postgres",
           "sqlserver-ee",
-          "sqlserver-se",
           "sqlserver-ex",
-        "sqlserver-web"]
+          "sqlserver-se",
+          "sqlserver-web",
+        ]
       }
 
       condition {
@@ -128,18 +137,18 @@ data "aws_iam_policy_document" "combined_policy_block" {
         variable = "rds:StorageEncrypted"
         values   = [false]
       }
-
     }
-
   }
 
   dynamic "statement" {
     for_each = local.require_rds_encryption_statement
+
     content {
       sid       = "DenyAuroraDatabaseCluster"
       effect    = "Deny"
       actions   = ["rds:CreateDBCluster"]
       resources = ["*"]
+
       condition {
         test     = "Bool"
         variable = "rds:StorageEncrypted"
@@ -147,7 +156,6 @@ data "aws_iam_policy_document" "combined_policy_block" {
       }
     }
   }
-
 }
 
 resource "aws_organizations_policy" "infrastructure_hardened_policy" {
@@ -161,4 +169,3 @@ resource "aws_organizations_policy_attachment" "policy_attachment" {
   policy_id = aws_organizations_policy.infrastructure_hardened_policy.id
   target_id = var.target_ou_id
 }
-
