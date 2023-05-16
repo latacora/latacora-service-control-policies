@@ -10,6 +10,12 @@ variable "deny_leaving_orgs" {
   type        = bool
 }
 
+variable "restrict_member_account_root_users" {
+  description = "Deny actions to member account root users"
+  default     = true
+  type        = bool
+}
+
 variable "deny_cloudtrail_changes" {
   description = "Denies access to deleting, updating, or stoppng Cloudtrail"
   default     = true
@@ -29,7 +35,7 @@ variable "deny_account_changes" {
 }
 
 variable "enabled_regions_policy" {
-  description = "enable specific regions?"
+  description = "Enable specific regions"
   default     = true
   type        = bool
 }

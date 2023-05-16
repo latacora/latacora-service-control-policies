@@ -4,16 +4,14 @@ locals {
 }
 
 module "security_scp" {
-  count  = local.security_policy
-  source = "./policy-groups/security-best-practices/"
-
+  count           = local.security_policy
+  source          = "./policy-groups/security-best-practices/"
   target_ou_id    = var.target_ou_id
   enabled_regions = var.enabled_regions
 }
 
 module "infrastructure_scp" {
-  count  = local.infrastructure_policy
-  source = "./policy-groups/infrastructure-best-practices/"
-
+  count        = local.infrastructure_policy
+  source       = "./policy-groups/infrastructure-best-practices/"
   target_ou_id = var.target_ou_id
 }
