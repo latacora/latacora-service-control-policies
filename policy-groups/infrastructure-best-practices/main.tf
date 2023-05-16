@@ -1,16 +1,6 @@
-locals {
-  require_imdsv2_statement               = var.require_imdsv2 ? [""] : []
-  deny_imds_change_statement             = var.deny_imds_change ? [""] : []
-  require_ebs_encryption_statement       = var.require_ebs_encryption ? [""] : []
-  require_s3_object_encryption_statement = var.require_s3_object_encryption ? [""] : []
-  require_s3_bucket_https_statement      = var.require_s3_bucket_https ? [""] : []
-  deny_s3_public_access_statement        = var.deny_s3_public_access ? [""] : []
-  require_rds_encryption_statement       = var.require_rds_encryption ? [""] : []
-}
-
 data "aws_iam_policy_document" "combined_policy_block" {
   dynamic "statement" {
-    for_each = local.require_imdsv2_statement
+    for_each = var.require_imdsv2 ? [1] : []
 
     content {
       sid       = "RequireIMDSv2"
@@ -27,7 +17,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
   }
 
   dynamic "statement" {
-    for_each = local.deny_imds_change_statement
+    for_each = var.deny_imds_change ? [1] : []
 
     content {
       sid       = "DenyIMDSChanges"
@@ -38,7 +28,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
   }
 
   dynamic "statement" {
-    for_each = local.require_ebs_encryption_statement
+    for_each = var.require_ebs_encryption ? [1] : []
 
     content {
       sid       = "RequireEBSEncryption"
@@ -55,7 +45,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
   }
 
   dynamic "statement" {
-    for_each = local.require_s3_object_encryption_statement
+    for_each = var.require_s3_object_encryption ? [1] : []
 
     content {
       sid       = "RequireObjectEncryption"
@@ -78,7 +68,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
   }
 
   dynamic "statement" {
-    for_each = local.require_s3_bucket_https_statement
+    for_each = var.require_s3_bucket_https ? [1] : []
 
     content {
       sid       = "RequireS3BucketHTTPS"
@@ -95,7 +85,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
   }
 
   dynamic "statement" {
-    for_each = local.deny_s3_public_access_statement
+    for_each = var.deny_s3_public_access ? [1] : []
 
     content {
       sid       = "DenyPublicAccesstoS3Buckets"
@@ -106,7 +96,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
   }
 
   dynamic "statement" {
-    for_each = local.require_rds_encryption_statement
+    for_each = var.require_rds_encryption ? [1] : []
 
     content {
       sid       = "DenyNotAuroraDBInstance"
@@ -141,7 +131,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
   }
 
   dynamic "statement" {
-    for_each = local.require_rds_encryption_statement
+    for_each = var.require_rds_encryption ? [1] : []
 
     content {
       sid       = "DenyAuroraDatabaseCluster"
