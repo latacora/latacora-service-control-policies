@@ -45,29 +45,6 @@ data "aws_iam_policy_document" "combined_policy_block" {
   }
 
   dynamic "statement" {
-    for_each = var.require_s3_object_encryption ? [1] : []
-
-    content {
-      sid       = "RequireObjectEncryption"
-      effect    = "Deny"
-      actions   = ["s3:PutObject"]
-      resources = ["arn:aws:s3:::*/*"]
-
-      condition {
-        test     = "ForAllValues:StringNotEquals"
-        variable = "s3:x-amz-server-side-encryption"
-        values   = ["AES256", "aws:kms"]
-      }
-
-      condition {
-        test     = "Null"
-        variable = "s3:x-amz-server-side-encryption"
-        values   = ["true"]
-      }
-    }
-  }
-
-  dynamic "statement" {
     for_each = var.require_s3_bucket_https ? [1] : []
 
     content {
