@@ -76,44 +76,18 @@ data "aws_iam_policy_document" "combined_policy_block" {
     for_each = var.require_rds_encryption ? [1] : []
 
     content {
-      sid       = "DenyNotAuroraDBInstance"
-      effect    = "Deny"
-      actions   = ["rds:CreateDBInstance"]
-      resources = ["*"]
-
-      condition {
-        test     = "ForAnyValue:StringEquals"
-        variable = "rds:DatabaseEngine"
-        values = [
-          "mariadb",
-          "mysql",
-          "oracle-ee",
-          "oracle-se",
-          "oracle-se1",
-          "oracle-se2",
-          "postgres",
-          "sqlserver-ee",
-          "sqlserver-ex",
-          "sqlserver-se",
-          "sqlserver-web",
-        ]
-      }
-
-      condition {
-        test     = "Bool"
-        variable = "rds:StorageEncrypted"
-        values   = [false]
-      }
-    }
-  }
-
-  dynamic "statement" {
-    for_each = var.require_rds_encryption ? [1] : []
-
-    content {
-      sid       = "DenyAuroraDatabaseCluster"
-      effect    = "Deny"
-      actions   = ["rds:CreateDBCluster"]
+      sid    = "DenyUnencryptedRDS"
+      effect = "Deny"
+      actions = [
+        "rds:CreateDBInstance",
+        "rds:CreateDBCluster",
+        "rds:RestoreDBInstanceFromDBSnapshot",
+        "rds:RestoreDBInstanceFromS3",
+        "rds:RestoreDBInstanceToPointInTime",
+        "rds:RestoreDBClusterFromSnapshot",
+        "rds:RestoreDBClusterFromS3",
+        "rds:RestoreDBClusterToPointInTime",
+      ]
       resources = ["*"]
 
       condition {
