@@ -28,8 +28,8 @@ data "aws_iam_policy_document" "combined_policy_block" {
       resources = ["*"]
 
       condition {
-        test     = "StringLike"
-        variable = "awsPrincipalArn"
+        test     = "ArnLike"
+        variable = "aws:PrincipalArn"
         values   = ["arn:aws:iam::*:root"]
       }
     }
