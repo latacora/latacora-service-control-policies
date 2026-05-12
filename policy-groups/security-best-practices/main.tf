@@ -44,6 +44,8 @@ data "aws_iam_policy_document" "combined_policy_block" {
       actions = [
         "cloudtrail:AddTags",
         "cloudtrail:DeleteTrail",
+        "cloudtrail:PutEventSelectors",
+        "cloudtrail:PutInsightSelectors",
         "cloudtrail:RemoveTags",
         "cloudtrail:StopLogging",
         "cloudtrail:UpdateTrail",
