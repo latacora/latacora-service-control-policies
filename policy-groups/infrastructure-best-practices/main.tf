@@ -78,15 +78,20 @@ data "aws_iam_policy_document" "combined_policy_block" {
     content {
       sid    = "DenyUnencryptedRDS"
       effect = "Deny"
+      # The following restore APIs are intentionally omitted:
+      #   - rds:RestoreDBInstanceFromDBSnapshot
+      #   - rds:RestoreDBInstanceToPointInTime
+      #   - rds:RestoreDBClusterFromSnapshot
+      #   - rds:RestoreDBClusterToPointInTime
+      # These APIs do not expose StorageEncrypted as a request parameter, so
+      # rds:StorageEncrypted is not available for this condition. Restored DB
+      # encryption must be enforced by keeping source snapshots, backups, and
+      # DB resources encrypted.
       actions = [
         "rds:CreateDBInstance",
         "rds:CreateDBCluster",
-        "rds:RestoreDBInstanceFromDBSnapshot",
         "rds:RestoreDBInstanceFromS3",
-        "rds:RestoreDBInstanceToPointInTime",
-        "rds:RestoreDBClusterFromSnapshot",
         "rds:RestoreDBClusterFromS3",
-        "rds:RestoreDBClusterToPointInTime",
       ]
       resources = ["*"]
 
