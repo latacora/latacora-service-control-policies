@@ -90,6 +90,7 @@ data "aws_iam_policy_document" "combined_policy_block" {
       actions = [
         "rds:CreateDBInstance",
         "rds:CreateDBCluster",
+        "rds:CreateGlobalCluster",
         "rds:RestoreDBInstanceFromS3",
         "rds:RestoreDBClusterFromS3",
       ]
