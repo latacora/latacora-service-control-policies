@@ -28,8 +28,8 @@ data "aws_iam_policy_document" "combined_policy_block" {
       resources = ["*"]
 
       condition {
-        test     = "StringLike"
-        variable = "awsPrincipalArn"
+        test     = "ArnLike"
+        variable = "aws:PrincipalArn"
         values   = ["arn:aws:iam::*:root"]
       }
     }
@@ -44,6 +44,8 @@ data "aws_iam_policy_document" "combined_policy_block" {
       actions = [
         "cloudtrail:AddTags",
         "cloudtrail:DeleteTrail",
+        "cloudtrail:PutEventSelectors",
+        "cloudtrail:PutInsightSelectors",
         "cloudtrail:RemoveTags",
         "cloudtrail:StopLogging",
         "cloudtrail:UpdateTrail",
@@ -178,8 +180,68 @@ data "aws_iam_policy_document" "combined_policy_block" {
       sid    = "DenyBillingChanges"
       effect = "Deny"
       actions = [
-        "aws-portal:ModifyBilling",
-        "aws-portal:ModifyPaymentMethods",
+        # equivalent to aws-portal:ModifyBilling (deduplicated with aws-portal:ModifyPayments equivalent)
+        "billing:PutContractInformation",
+        "billing:RedeemCredits",
+        "billing:UpdateBillingPreferences",
+        # excluding Cost Explorer "create" and "provide feedback" actions to not hinder FinOps
+        # "ce:CreateAnomalyMonitor",
+        # "ce:CreateAnomalySubscription",
+        # "ce:CreateNotificationSubscription",
+        # "ce:CreateReport",
+        # "ce:ProvideAnomalyFeedback",
+        # "ce:StartSavingsPlansPurchaseRecommendationGeneration",
+        "ce:DeleteAnomalyMonitor",
+        "ce:DeleteAnomalySubscription",
+        "ce:DeleteNotificationSubscription",
+        "ce:DeleteReport",
+        "ce:UpdateAnomalyMonitor",
+        "ce:UpdateAnomalySubscription",
+        "ce:UpdateCostAllocationTagsStatus",
+        "ce:UpdateNotificationSubscription",
+        "ce:UpdatePreferences",
+        "cur:PutClassicReportPreferences",
+        "freetier:PutFreeTierAlertPreference",
+        "invoicing:PutInvoiceEmailDeliveryPreferences",
+        "tax:BatchPutTaxRegistration",
+        "tax:DeleteTaxRegistration",
+        "tax:PutTaxInheritance",
+
+        # equivalent to aws-portal:ModifyPaymentMethods
+        # excluding "account:GetAccountInformation" since it is commonly legitimately used
+        "payments:DeletePaymentInstrument",
+        "payments:CreatePaymentInstrument",
+        # exclude "payments:MakePayment" to avoid blocking legitimate payments
+        # "payments:MakePayment",
+        "payments:UpdatePaymentPreferences",
+
+        # equivalent to purchase-orders:ModifyPurchaseOrders
+        "purchase-orders:AddPurchaseOrder",
+        "purchase-orders:DeletePurchaseOrder",
+        "purchase-orders:UpdatePurchaseOrder",
+        "purchase-orders:UpdatePurchaseOrderStatus",
+
+        "billing:UpdateIAMAccessPreference",
+        "invoicing:CreateInvoiceUnit",
+        "invoicing:CreateProcurementPortalPreference",
+        "invoicing:DeleteInvoiceUnit",
+        "invoicing:DeleteProcurementPortalPreference",
+        "invoicing:PutProcurementPortalPreference",
+        "invoicing:StartInvoiceCorrection",
+        "invoicing:UpdateInvoiceUnit",
+        "invoicing:UpdateProcurementPortalPreferenceStatus",
+        "payments:AcceptFinancingApplication",
+        "payments:CreateFinancingApplication",
+        "payments:UpdateFinancingApplication",
+        "payments:UpdatePaymentInstrument",
+        "tax:BatchDeleteTaxRegistration",
+        "tax:CancelTaxDocument",
+        "tax:DeleteSupplementalTaxRegistration",
+        "tax:PutSupplementalTaxRegistration",
+        "tax:PutTaxDocument",
+        "tax:PutTaxExemption",
+        "tax:PutTaxRegistration",
+        "tax:UpdateTaxInterview",
       ]
       resources = ["*"]
     }
@@ -189,9 +251,20 @@ data "aws_iam_policy_document" "combined_policy_block" {
     for_each = var.deny_account_changes ? [1] : []
 
     content {
-      sid       = "DenyAccountChanges"
-      effect    = "Deny"
-      actions   = ["aws-portal:ModifyAccount"]
+      sid    = "DenyAccountChanges"
+      effect = "Deny"
+      actions = [
+        # equivalent to aws-portal:ModifyAccount, deduplicated with aws-portal:ModifyBilling equivalent above
+        "account:CloseAccount",
+        "account:DeleteAlternateContact",
+        "account:PutAlternateContact",
+        "account:PutContactInformation",
+
+        "account:AcceptPrimaryEmailUpdate",
+        "account:DisableRegion",
+        "account:EnableRegion",
+        "account:StartPrimaryEmailUpdate",
+      ]
       resources = ["*"]
     }
   }
