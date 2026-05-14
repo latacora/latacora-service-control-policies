@@ -36,6 +36,7 @@ data "aws_iam_policy_document" "this" {
         "datapipeline:GetAccountLimits",
         "devicefarm:*",
         "directconnect:*",
+        "discovery-marketplace:*",
         "ec2:DescribeRegions",
         "ec2:DescribeTransitGateways",
         "ec2:DescribeVpnGateways",
@@ -96,7 +97,8 @@ data "aws_iam_policy_document" "this" {
         "vendor-insights:ListEntitledSecurityProfiles",
         "waf-regional:*",
         "waf:*",
-        "wafv2:*"
+        "wafv2:*",
+        "wellarchitected:*",
       ]
 
       resources = ["*"]
