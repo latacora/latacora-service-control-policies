@@ -8,7 +8,7 @@ data "aws_iam_policy_document" "this" {
       # These actions do not operate in a specific region, or only run in
       # a single region, so we don't want to try restricting them by region.
       # List of actions can be found in the following example:
-      # https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps_examples_general.html
+      # https://github.com/aws-samples/service-control-policy-examples/blob/main/Region-controls/Deny-access-to-AWS-based-on-the-requested-AWS-region.json
       # Also merge in changes from Control Tower Region Deny control: https://docs.aws.amazon.com/controltower/latest/userguide/primary-region-deny-policy.html
       not_actions = [
         "a4b:*",

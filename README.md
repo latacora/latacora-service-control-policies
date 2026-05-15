@@ -39,7 +39,7 @@ This set of SCPs ensures that infrastructure created in the account meets best p
 | EC2 | RequireEBSEncryption | Prevents creating EBS volumes unless encryption is enabled | Encrypts data at rest and in transit between an instance and its EBS volumes. |
 | S3 | RequireS3BucketHTTPS | Denies any S3 API request where `aws:SecureTransport` is false | Forces TLS; prevents eavesdropping and MITM on S3 traffic. |
 | S3 | DenyPublicAccesstoS3Buckets | Prevents modifying the S3 Account-level Public Access Block | Preserves a safe default against accidental public buckets. |
-| RDS | DenyUnencryptedRDS | Prevents creating or restoring an RDS/Aurora/Neptune/DocumentDB instance or cluster unless storage encryption is enabled | Enforces at-rest encryption across create and restore paths, regardless of engine. |
+| RDS | DenyUnencryptedRDS | Prevents creating or restoring an RDS or Aurora instance or cluster unless storage encryption is enabled | Enforces at-rest encryption across create and restore paths. |
 
 #### Governance Best Practices
 
