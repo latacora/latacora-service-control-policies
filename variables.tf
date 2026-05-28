@@ -35,7 +35,6 @@ variable "governance_policy_target_ids" {
 }
 
 variable "enabled_regions" {
-  description = "List of regions that are allowed (used by the governance SCP). Defaults to us-east-1 so callers don't accidentally lock themselves out of global-service endpoints."
+  description = "List of regions that are allowed (used by the governance SCP). Ensure you add us-east-1 at minimum to avoid locking out global-service endpoints."
   type        = list(string)
-  default     = ["us-east-1"]
 }
