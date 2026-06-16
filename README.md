@@ -106,9 +106,33 @@ Each module has per-statement bool variables in its `variables.tf` (e.g. `deny_c
 
 Note: This assumes valid AWS credentials for the management account (where SCPs are managed) and basic familiarity with Terraform and state management. Since everything in this module is SCP configuration, losing state is recoverable.
 
+#### Upgrading from the two-module layout
+
+Previous versions had two modules — `security_scp` and `infrastructure_scp` — each taking a single `target_ou_id` string. The current layout adds the `governance_scp` module (region deny, previously embedded in the security policy) and switches each module's attachment from a single `target_ou_id` to a `target_ids` list attached via `for_each`.
+
+In-module renames are handled automatically by `moved` blocks shipped with each module — no action required for the policy resources or the `aws_iam_policy_document` data sources.
+
+The attachment resource changed shape (single → `for_each` keyed by target ID), which a static `moved` block in the module can't express portably. If you don't add a `moved` block in your root config, Terraform will plan to destroy the old attachment and create a new one. SCP attachments are detach/attach operations, so a brief replace is generally safe, but for a clean no-op plan add a `moved` block in your root config for each previously-attached module, keyed by the target ID you used to pass as `target_ou_id`:
+
+```hcl
+moved {
+  from = module.scps.module.security_scp[0].aws_organizations_policy_attachment.policy_attachment
+  to   = module.scps.module.security_scp[0].aws_organizations_policy_attachment.this["r-abcd"]
+}
+
+moved {
+  from = module.scps.module.infrastructure_scp[0].aws_organizations_policy_attachment.policy_attachment
+  to   = module.scps.module.infrastructure_scp[0].aws_organizations_policy_attachment.this["ou-abcd-workloads"]
+}
+```
+
+The governance module is new — no `moved` block needed.
+
+You will also need to update your root config: replace each module's `target_ou_id = "..."` with `*_policy_target_ids = ["..."]`, and (if region-deny was in use) add `governance_policy_target_ids` plus `enabled_regions`.
+
 #### SCP size limit
 
-AWS Organizations enforces a 5,120-character limit per SCP. The three-module split keeps each policy well under that ceiling, with headroom to add statements.
+AWS Organizations enforces a per-SCP character limit (historically 5,120; AWS has since raised it). Even with the increase, splitting along security / infrastructure / governance lines keeps each policy small and makes intent explicit, leaving plenty of headroom to add statements.
 
 ### References
 
