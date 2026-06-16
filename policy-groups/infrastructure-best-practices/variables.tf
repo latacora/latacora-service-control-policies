@@ -1,6 +1,6 @@
-variable "target_ou_id" {
-  description = "id of the organization unit to attach the policy to"
-  type        = string
+variable "target_ids" {
+  description = "IDs of the targets (organization roots, OUs, or accounts) to attach the policy to"
+  type        = list(string)
 }
 
 variable "require_imdsv2" {

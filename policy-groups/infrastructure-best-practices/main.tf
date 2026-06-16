@@ -1,4 +1,4 @@
-data "aws_iam_policy_document" "combined_policy_block" {
+data "aws_iam_policy_document" "this" {
   dynamic "statement" {
     for_each = var.require_imdsv2 ? [1] : []
 
@@ -105,14 +105,14 @@ data "aws_iam_policy_document" "combined_policy_block" {
   }
 }
 
-resource "aws_organizations_policy" "infrastructure_hardened_policy" {
+resource "aws_organizations_policy" "this" {
   name        = "infrastructure-policy"
   description = "This policy contains controls to ensure hardening of AWS Infrastructure"
-  content     = data.aws_iam_policy_document.combined_policy_block.json
-
+  content     = data.aws_iam_policy_document.this.json
 }
 
-resource "aws_organizations_policy_attachment" "policy_attachment" {
-  policy_id = aws_organizations_policy.infrastructure_hardened_policy.id
-  target_id = var.target_ou_id
+resource "aws_organizations_policy_attachment" "this" {
+  for_each  = toset(var.target_ids)
+  policy_id = aws_organizations_policy.this.id
+  target_id = each.value
 }

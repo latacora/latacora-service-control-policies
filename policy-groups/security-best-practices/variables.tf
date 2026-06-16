@@ -1,6 +1,6 @@
-variable "target_ou_id" {
-  description = "id of the organization unit to attach the policy to"
-  type        = string
+variable "target_ids" {
+  description = "IDs of the targets (organization roots, OUs, or accounts) to attach the policy to"
+  type        = list(string)
 }
 
 # Policy Statement Switches
@@ -32,15 +32,4 @@ variable "deny_account_changes" {
   description = "Denies access to make account changes"
   default     = true
   type        = bool
-}
-
-variable "enabled_regions_policy" {
-  description = "Enable specific regions"
-  default     = true
-  type        = bool
-}
-
-variable "enabled_regions" {
-  description = "List of regions that are allowed"
-  type        = list(string)
 }
