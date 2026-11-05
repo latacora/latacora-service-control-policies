@@ -1,4 +1,4 @@
-data "aws_iam_policy_document" "this" {
+data "aws_iam_policy_document" "governance" {
   dynamic "statement" {
     for_each = var.enabled_regions_policy ? [1] : []
 
@@ -118,14 +118,14 @@ data "aws_iam_policy_document" "this" {
   }
 }
 
-resource "aws_organizations_policy" "this" {
+resource "aws_organizations_policy" "governance" {
   name        = "governance-policy"
   description = "Governance SCPs (e.g. region deny) recommended by Latacora"
-  content     = data.aws_iam_policy_document.this.json
+  content     = data.aws_iam_policy_document.governance.json
 }
 
-resource "aws_organizations_policy_attachment" "this" {
+resource "aws_organizations_policy_attachment" "governance" {
   for_each  = toset(var.target_ids)
-  policy_id = aws_organizations_policy.this.id
+  policy_id = aws_organizations_policy.governance.id
   target_id = each.value
 }

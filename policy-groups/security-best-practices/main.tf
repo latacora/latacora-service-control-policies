@@ -1,4 +1,4 @@
-data "aws_iam_policy_document" "this" {
+data "aws_iam_policy_document" "security" {
   #
   # Deny leaving AWS Organizations
   #
@@ -147,14 +147,14 @@ data "aws_iam_policy_document" "this" {
   }
 }
 
-resource "aws_organizations_policy" "this" {
+resource "aws_organizations_policy" "security" {
   name        = "security-policy"
   description = "This policy contains the security controls recommended by Latacora for hardening of an organization"
-  content     = data.aws_iam_policy_document.this.json
+  content     = data.aws_iam_policy_document.security.json
 }
 
-resource "aws_organizations_policy_attachment" "this" {
+resource "aws_organizations_policy_attachment" "security" {
   for_each  = toset(var.target_ids)
-  policy_id = aws_organizations_policy.this.id
+  policy_id = aws_organizations_policy.security.id
   target_id = each.value
 }

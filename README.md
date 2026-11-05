@@ -111,25 +111,40 @@ Note: This assumes valid AWS credentials for the management account (where SCPs 
 
 Previous versions had two modules — `security_scp` and `infrastructure_scp` — each taking a single `target_ou_id` string. The current layout adds the `governance_scp` module (region deny, previously embedded in the security policy) and switches each module's attachment from a single `target_ou_id` to a `target_ids` list attached via `for_each`.
 
-In-module renames are handled automatically by `moved` blocks shipped with each module — no action required for the policy resources or the `aws_iam_policy_document` data sources.
+Resources in each module are now named after their policy group:
 
-The attachment resource changed shape (single → `for_each` keyed by target ID), which a static `moved` block in the module can't express portably. If you don't add a `moved` block in your root config, Terraform will plan to destroy the old attachment and create a new one. SCP attachments are detach/attach operations, so a brief replace is generally safe, but for a clean no-op plan add a `moved` block in your root config for each previously-attached module, keyed by the target ID you used to pass as `target_ou_id`:
+| Module | Old address (inside the module) | New address |
+| --- | --- | --- |
+| `security_scp` | `aws_organizations_policy.security_hardened_policy` | `aws_organizations_policy.security` |
+| `security_scp` | `aws_organizations_policy_attachment.policy_attachment` | `aws_organizations_policy_attachment.security["<target-id>"]` |
+| `infrastructure_scp` | `aws_organizations_policy.infrastructure_hardened_policy` | `aws_organizations_policy.infrastructure` |
+| `infrastructure_scp` | `aws_organizations_policy_attachment.policy_attachment` | `aws_organizations_policy_attachment.infrastructure["<target-id>"]` |
+| `governance_scp` | (new) | `aws_organizations_policy.governance`, `aws_organizations_policy_attachment.governance["<target-id>"]` |
+
+The policy renames are handled by `moved` blocks shipped in each module, so no action is needed for them. The `aws_iam_policy_document` data sources were also renamed, but data sources are re-read on every plan and don't need `moved` blocks.
+
+**Attachments need a `moved` block in your root config.** Each attachment is now created with `for_each`, keyed by target ID. The key comes from your input, so the module can't ship a `moved` block for it. Without one, Terraform destroys the old attachment before creating the new one, which leaves that SCP detached (and its denies unenforced) for the length of the apply. Add one `moved` block per module you had attached, keyed by the ID you used to pass as `target_ou_id`. Adjust `module.scps` to whatever you named the module in your config:
 
 ```hcl
 moved {
   from = module.scps.module.security_scp[0].aws_organizations_policy_attachment.policy_attachment
-  to   = module.scps.module.security_scp[0].aws_organizations_policy_attachment.this["r-abcd"]
+  to   = module.scps.module.security_scp[0].aws_organizations_policy_attachment.security["r-abcd"]
 }
 
 moved {
   from = module.scps.module.infrastructure_scp[0].aws_organizations_policy_attachment.policy_attachment
-  to   = module.scps.module.infrastructure_scp[0].aws_organizations_policy_attachment.this["ou-abcd-workloads"]
+  to   = module.scps.module.infrastructure_scp[0].aws_organizations_policy_attachment.infrastructure["ou-abcd-workloads"]
 }
 ```
 
-The governance module is new — no `moved` block needed.
+The governance module is new, so it needs no `moved` block.
 
 You will also need to update your root config: replace each module's `target_ou_id = "..."` with `*_policy_target_ids = ["..."]`, and (if region-deny was in use) add `governance_policy_target_ids` plus `enabled_regions`.
+
+Before applying, check the plan:
+
+- The policies and existing attachments should show as moved, not destroyed. Any `destroy` on an `aws_organizations_policy_attachment` means a `moved` block is missing or has the wrong key.
+- If you used the region deny, it moves from `security-policy` to the new `governance-policy`. Both changes happen in the same apply, so there can be a short window where neither policy has it. To avoid that, apply the governance module first (`terraform apply -target=module.scps.module.governance_scp`), then run a full apply.
 
 #### SCP size limit
 

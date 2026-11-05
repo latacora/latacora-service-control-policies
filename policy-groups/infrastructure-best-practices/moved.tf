@@ -1,9 +1,7 @@
-moved {
-  from = data.aws_iam_policy_document.combined_policy_block
-  to   = data.aws_iam_policy_document.this
-}
-
+# Renames from the two-module layout. Data sources are re-read on every
+# plan and need no moved block, so only the managed policy is listed. The
+# attachment changed to for_each and is moved from the root config (see README).
 moved {
   from = aws_organizations_policy.infrastructure_hardened_policy
-  to   = aws_organizations_policy.this
+  to   = aws_organizations_policy.infrastructure
 }
