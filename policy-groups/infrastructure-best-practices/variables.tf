@@ -21,6 +21,12 @@ variable "require_ebs_encryption" {
   type        = bool
 }
 
+variable "deny_ebs_encryption_by_default_changes" {
+  description = "Denies disabling EBS encryption by default"
+  default     = true
+  type        = bool
+}
+
 variable "require_s3_object_encryption" {
   description = "Requires s3 object encryption"
   default     = true

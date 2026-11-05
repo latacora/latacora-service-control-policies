@@ -31,16 +31,29 @@ data "aws_iam_policy_document" "this" {
     for_each = var.require_ebs_encryption ? [1] : []
 
     content {
-      sid       = "RequireEBSEncryption"
-      effect    = "Deny"
-      actions   = ["ec2:CreateVolume", ]
-      resources = ["*"]
+      sid    = "RequireEBSEncryption"
+      effect = "Deny"
+      # RunInstances creates root and block-device-mapping volumes without
+      # calling CreateVolume, so both actions are needed.
+      actions   = ["ec2:CreateVolume", "ec2:RunInstances"]
+      resources = ["arn:aws:ec2:*:*:volume/*"]
 
       condition {
         test     = "Bool"
         variable = "ec2:Encrypted"
         values   = [false]
       }
+    }
+  }
+
+  dynamic "statement" {
+    for_each = var.deny_ebs_encryption_by_default_changes ? [1] : []
+
+    content {
+      sid       = "DenyEbsEncryptionByDefaultChanges"
+      effect    = "Deny"
+      actions   = ["ec2:DisableEbsEncryptionByDefault"]
+      resources = ["*"]
     }
   }
 
