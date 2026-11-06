@@ -23,7 +23,7 @@ This set of SCPs is designed to limit the attack surface of the AWS environment 
 | Service | SCP Statement | Effect | Implementation Reasoning |
 | --- | --- | --- | --- |
 | Account | DenyLeavingOrgs | Prevents accounts from leaving their organization | Organization account management should only be done by the management account. This SCP prevents member accounts from removing themselves from the Org and becoming standalone AWS accounts. |
-| Account (root) | RestrictMemberAccountRootUsers | Denies all actions taken by the member-account root user | We recommend deleting member account root credentials using [centralized root access](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-enable-root-access.html), with this SCP for defense-in-depth. Daily operations should use IAM roles/SSO. |
+| Account (root) | RestrictMemberAccountRootUsers | Denies all actions taken with member-account root user credentials. Sessions from [centralized root access](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-enable-root-access.html) (`sts:AssumeRoot`) are not denied. | We recommend deleting member account root credentials using centralized root access, with this SCP for defense-in-depth. The exemption uses the `aws:AssumedRoot` key, as [AWS recommends](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-assumedroot), so privileged tasks run from the management account still work. Daily operations should use IAM roles/SSO. |
 | CloudTrail | DenyCloudTrailChanges | Denies modifications to CloudTrail trails | Once an organizational trail is correctly configured (ideally shipping to a separate Log Archive account), this SCP ensures trails cannot be deleted, stopped, or have their event selectors altered, protecting log integrity. |
 | Billing | DenyBillingChanges | Blocks changes to billing, payments, invoicing, purchase orders, tax registrations, and financing applications | Billing, tax, and payment options should be managed in the management account for the organization. |
 | Account | DenyAccountChanges | Blocks modifications to account contacts, primary email, and region enable/disable | Account settings should be managed by the management account. |
@@ -52,15 +52,16 @@ Broad, org-wide guardrails that are governance-oriented rather than directly sec
 
 ### Deployment
 
-Terraform Version: > 1.0.0
+Terraform version: 1.1.0 or later (for `moved` blocks).
 
 #### Usage
 
-Consume this repo as a Terraform module. We recommend pinning `source` to a specific commit SHA (not a branch or tag) so the policies applied to your organization are reproducible and can only change through an intentional bump:
+Consume this repo as a Terraform module, pinned to the commit SHA of a release tag. Keep the tag in a comment so readers and reviewers can see which release it is:
 
 ```hcl
 module "scps" {
-  source = "git::https://github.com/latacora/latacora-service-control-policies.git?ref=<full-40-char-sha>"
+  # v1.0.0
+  source = "git::https://github.com/latacora/latacora-service-control-policies.git?ref=<full-40-char-sha-of-v1.0.0>"
 
   security_policy_target_ids       = ["r-abcd"]
   infrastructure_policy_target_ids = ["ou-abcd-workloads"]
@@ -70,11 +71,27 @@ module "scps" {
 }
 ```
 
-Why pin to a SHA rather than a tag or branch:
+#### Versions and pinning
 
-- Tags can be moved; branches change on every push. Either can silently alter which SCPs are attached to your org.
-- SCPs are high-blast-radius controls — an unreviewed change here can break production or weaken guardrails.
-- A SHA pin makes upgrades an explicit, reviewable PR: bump the `ref=`, run `terraform plan`, inspect the diff, merge.
+Releases use [semantic versioning](https://semver.org/) and are listed on the [releases page](https://github.com/latacora/latacora-service-control-policies/releases) and in [`CHANGELOG.md`](/CHANGELOG.md):
+
+- **Major** (`v2.0.0`): changes you must act on, such as renamed variables, new required inputs, or `moved` blocks you need to add.
+- **Minor** (`v1.1.0`): new statements or stricter conditions. These can deny actions that were allowed before, so read the changelog and review the plan before upgrading.
+- **Patch** (`v1.0.1`): fixes that make existing statements work as documented.
+
+Pick a release by its version, then pin to that release's commit SHA rather than the tag name. Each release's notes list its SHA, or you can look it up:
+
+```sh
+gh api repos/latacora/latacora-service-control-policies/commits/v1.0.0 --jq .sha
+# or, without the GitHub CLI (use the line ending in ^{} if there is one):
+git ls-remote --tags https://github.com/latacora/latacora-service-control-policies.git 'v1.0.0*'
+```
+
+Why a SHA rather than the tag or a branch:
+
+- SCPs are high-blast-radius controls; an unreviewed change here can break production or weaken guardrails.
+- A branch changes on every push. A tag can be moved to a different commit, so `?ref=v1.0.0` isn't guaranteed to fetch the same code tomorrow. A SHA can only ever mean one commit.
+- With a SHA pin, every upgrade is an explicit, reviewable change: pick the new release, update the SHA and the version comment, run `terraform plan`, review the diff, merge.
 
 #### Required / notable variables
 
@@ -83,7 +100,7 @@ Defined in [`variables.tf`](/variables.tf):
 - `security_policy_target_ids` — list of organization roots, OUs, or accounts to attach `security-policy` to
 - `infrastructure_policy_target_ids` — targets for `infrastructure-policy`
 - `governance_policy_target_ids` — targets for `governance-policy`
-- `enabled_regions` — list of allowed regions for the governance region-deny policy. **Defaults to `["us-east-1"]`** so callers don't accidentally lock themselves out; override in real deployments.
+- `enabled_regions` — **required.** List of allowed regions for the governance region-deny policy. There is no default, so you have to choose your regions; include `us-east-1` to avoid locking out global-service endpoints.
 - `enable_security_policy`, `enable_infrastructure_policy`, `enable_governance_policy` — bool toggles for each module (all default to `true`)
 
 Each target list is independent, so you can (for example) attach the security and governance SCPs to the entire org root while scoping the infrastructure SCP to a workload OU:
@@ -97,6 +114,8 @@ infrastructure_policy_target_ids  = ["ou-abcd-workloads"]
 #### Disabling individual statements
 
 Each module has per-statement bool variables in its `variables.tf` (e.g. `deny_cloudtrail_changes`, `require_imdsv2`). Flip one to `false` to drop that statement from the compiled policy. This is also the mechanism for temporarily disabling a control — set false, apply, make the change, set true, apply again. (For example, disabling `deny_imds_change` while migrating instances from IMDSv1 to v2.)
+
+These variables are on the policy-group modules, not the root module. To set them, call the policy-group module directly, e.g. `source = "git::https://github.com/latacora/latacora-service-control-policies.git//policy-groups/security-best-practices?ref=<release-sha>"`, pinned the same way as above.
 
 #### Deployment
 
@@ -146,9 +165,19 @@ Before applying, check the plan:
 - The policies and existing attachments should show as moved, not destroyed. Any `destroy` on an `aws_organizations_policy_attachment` means a `moved` block is missing or has the wrong key.
 - If you used the region deny, it moves from `security-policy` to the new `governance-policy`. Both changes happen in the same apply, so there can be a short window where neither policy has it. To avoid that, apply the governance module first (`terraform apply -target=module.scps.module.governance_scp`), then run a full apply.
 
+#### Behavior changes in v1.0.0
+
+Besides the layout change, these change what the policies allow or deny compared with the last two-module version. Review them against your environment before applying:
+
+- `RestrictMemberAccountRootUsers` no longer denies [centralized root access](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-enable-root-access.html) sessions (`sts:AssumeRoot`).
+- `RequireEBSEncryption` now also covers volumes created by `RunInstances`, including root volumes from AMIs with unencrypted snapshots. Turn on EBS encryption by default in each account and region first, or launches from those AMIs will fail.
+- New statement: `DenyEbsEncryptionByDefaultChanges`.
+- `DenyCloudtrailChanges` also denies `cloudtrail:PutEventSelectors` and `cloudtrail:PutInsightSelectors`.
+- `DenyBillingChanges` and `DenyAccountChanges` replace the legacy `aws-portal:*` actions with the current billing, payments, tax, invoicing and account actions, and now also deny region opt-in changes and contact and primary-email updates in member accounts.
+
 #### SCP size limit
 
-AWS Organizations enforces a per-SCP character limit (historically 5,120; AWS has since raised it). Even with the increase, splitting along security / infrastructure / governance lines keeps each policy small and makes intent explicit, leaving plenty of headroom to add statements.
+AWS Organizations allows up to [10,240 characters per SCP](https://docs.aws.amazon.com/organizations/latest/userguide/org_troubleshoot_policies.html), and when a policy is created through the API, whitespace counts. Splitting along security / infrastructure / governance lines keeps each policy well under that and makes intent explicit, leaving plenty of headroom to add statements.
 
 ### References
 
@@ -160,7 +189,7 @@ Although these are the Latacora recommended SCPs, we did not come up with them a
 - https://github.com/ScaleSec/terraform_aws_scp/tree/main/security_controls_scp
 - https://github.com/trussworks/terraform-aws-ou-scp
 - https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps_examples.html
-- https://docs.aws.amazon.com/controltower/latest/userguide/primary-region-deny-policy.html
+- https://docs.aws.amazon.com/controltower/latest/controlreference/primary-region-deny-policy.html
 
 ### Feedback
 
