@@ -28,6 +28,17 @@ data "aws_iam_policy_document" "security" {
         variable = "aws:PrincipalArn"
         values   = ["arn:aws:iam::*:root"]
       }
+
+      # Only deny long-term root credentials. Sessions from centralized root
+      # access (sts:AssumeRoot) carry aws:AssumedRoot and are left to the
+      # task policy AWS scopes them to. Without this, the statement also
+      # blocks centralized root access.
+      # https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-assumedroot
+      condition {
+        test     = "Null"
+        variable = "aws:AssumedRoot"
+        values   = ["true"]
+      }
     }
   }
 
@@ -107,18 +118,18 @@ data "aws_iam_policy_document" "security" {
         "invoicing:StartInvoiceCorrection",
         "invoicing:UpdateInvoiceUnit",
         "invoicing:UpdateProcurementPortalPreferenceStatus",
-        "payments:AcceptFinancingApplication",
+        "payments:AcceptFinancingApplicationTerms",
         "payments:CreateFinancingApplication",
         "payments:UpdateFinancingApplication",
         "payments:UpdatePaymentInstrument",
         "tax:BatchDeleteTaxRegistration",
-        "tax:CancelTaxDocument",
+        "tax:CancelDocument",
         "tax:DeleteSupplementalTaxRegistration",
         "tax:PutSupplementalTaxRegistration",
-        "tax:PutTaxDocument",
-        "tax:PutTaxExemption",
+        "tax:CreateDocument",
+        "tax:UpdateExemptions",
         "tax:PutTaxRegistration",
-        "tax:UpdateTaxInterview",
+        "tax:PutTaxInterview",
       ]
       resources = ["*"]
     }
