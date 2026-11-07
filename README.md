@@ -1,83 +1,211 @@
 ## Latacora Service Control Policy Recommendations
 
-There are three groups of Service Control Policies (SCPs) that [Latacora](https://www.latacora.com/) recommends putting in place. These SCPs map closely to IG1 and IG3 from the Security Architecture Review Process. 
+These are the foundational Service Control Policies (SCPs) that [Latacora](https://www.latacora.com/) recommends putting in place.
 
-### IG 1 - Base Security and Infrastructure Configuration Controls
+### Base Security, Infrastructure, and Governance Controls
 
-These Policies are meant to be implemented at the root organizational unit as they will harden the security of the account as well as enforce security best practices when it comes to the infrastructure that is being deployed. 
+These policies are meant to be implemented at the root organizational unit (or at targeted OUs/accounts) to harden the security of the organization, enforce infrastructure best practices, and apply broad governance controls.
+
+The repo is split into three modules, each producing a single SCP:
+
+- `policy-groups/security-best-practices/` — `security-policy`
+- `policy-groups/infrastructure-best-practices/` — `infrastructure-policy`
+- `policy-groups/governance-best-practices/` — `governance-policy`
+
+Each module is attached independently via its own `target_ids` variable, so different policies can be attached to different OUs or accounts.
+
+Note: these policies may prevent infrastructure from being deployed by IaC tools when the configurations are not compliant with the SCPs.
 
 #### Security Best Practices
 
-This set of SCPs is designed to limit the attack surface of the AWS environment as well as to harden the most important actions that can be taken in an account. 
+This set of SCPs is designed to limit the attack surface of the AWS environment and harden the most important actions that can be taken in an account.
 
-This module includes the following SCPs:
-
-| Service     | SCP Name    | Effect | Implementation Reasoning                                                                                                                                                                                                                                                                                                                                                         |
-| ----------- | ----------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| 
-| Account     | DenyLeavingOrgs |     Prevents accounts from being able to leave their organization | Organization account management should only be done by the management account. This includes actions such as adding or removing accounts from the Organization. This SCP prevents member accounts from having the ability to remove themselves from the Org and becoming a standalone AWS account.                                                                               |
-| CloudTrail   | DenyCloudTrailChanges | Denies CloudTrail configuration changes | This policy is meant to be implemented after an organizational CloudTrail has been configured correctly. Latacora recommends configuring the trail to send these logs to a separate Log Archive account where permission is tightly controlled. Once the trail has been set up, implement this SCP to ensure that no changes can be made to protect the integrity of the logs.   |
-| Global | EnabledRegions | Denies all AWS Regions not specified in the SCP | This policy takes a list of AWS Regions as input and will disable all API calls taken outside of the specified regions. This policy is a little verbose as it must exclude global services from the SCP.                                                                                                                                                                         |
-| Billing     | DenyBillingChanges | Blocks changes to the billing and cost management settings as well as changes to the payment methods | Billing and payment options should be managed in the management account for the organization.                                                                                                                                                                                                                                                                                    |
-| Account     | DenyAccountChanges | Blocks modifications to the account settings | Account settings should be managed by the Management account.                                                                                                                                                                                                                                                                                                                    |
+| Service | SCP Statement | Effect | Implementation Reasoning |
+| --- | --- | --- | --- |
+| Account | DenyLeavingOrgs | Prevents accounts from leaving their organization | Organization account management should only be done by the management account. This SCP prevents member accounts from removing themselves from the Org and becoming standalone AWS accounts. |
+| Account (root) | RestrictMemberAccountRootUsers | Denies all actions taken with member-account root user credentials. Sessions from [centralized root access](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-enable-root-access.html) (`sts:AssumeRoot`) are not denied. | We recommend deleting member account root credentials using centralized root access, with this SCP for defense-in-depth. The exemption uses the `aws:AssumedRoot` key, as [AWS recommends](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-assumedroot), so privileged tasks run from the management account still work. Daily operations should use IAM roles/SSO. |
+| CloudTrail | DenyCloudTrailChanges | Denies modifications to CloudTrail trails | Once an organizational trail is correctly configured (ideally shipping to a separate Log Archive account), this SCP ensures trails cannot be deleted, stopped, or have their event selectors altered, protecting log integrity. |
+| Billing | DenyBillingChanges | Blocks changes to billing, payments, invoicing, purchase orders, tax registrations, and financing applications | Billing, tax, and payment options should be managed in the management account for the organization. |
+| Account | DenyAccountChanges | Blocks modifications to account contacts, primary email, and region enable/disable | Account settings should be managed by the management account. |
 
 #### Infrastructure Best Practices
 
-This set of SCPs ensures that the infrastructure that gets created in the account meets best practices at a service level. 
+This set of SCPs ensures that infrastructure created in the account meets best practices at a service level.
 
-Note: These policies may prevent infrastructure from being deployed by IaC tools when the configurations are not complete with the correct settings enabled. 
+| Service | SCP Statement | Effect | Implementation Reasoning |
+| --- | --- | --- | --- |
+| EC2 | RequireIMDSv2 | Prevents EC2 instances from being created unless `ec2:MetadataHttpTokens` is required | IMDSv1 allows an SSRF-vulnerable app to steal instance credentials from the metadata service. IMDSv2 mitigates that risk. |
+| EC2 | DenyIMDSChanges | Prevents modifying EC2 instance metadata options | Paired with RequireIMDSv2 so the configuration cannot be downgraded to v1. See [our blog post on IMDSv1](https://www.latacora.com/blog/2021/08/11/remediating-aws-imdsv1/) before enabling. |
+| EC2 | RequireEBSEncryption | Prevents creating unencrypted EBS volumes, either directly or when launching an instance (including root volumes from unencrypted AMIs) | Encrypts data at rest and in transit between an instance and its EBS volumes. See [EBS encryption](#ebs-encryption) below before enabling. |
+| EC2 | DenyEbsEncryptionByDefaultChanges | Prevents disabling EBS encryption by default | EBS encryption by default is a per-account, per-region setting that EC2 declarative policies don't support, so enable it in each account and region first (e.g. with `aws_ebs_encryption_by_default`). This SCP keeps it from being switched off. |
+| S3 | RequireS3BucketHTTPS | Denies any S3 API request where `aws:SecureTransport` is false | Forces TLS; prevents eavesdropping and MITM on S3 traffic. |
+| S3 | DenyPublicAccesstoS3Buckets | Prevents modifying the S3 Account-level Public Access Block | Preserves a safe default against accidental public buckets. |
+| RDS | DenyUnencryptedRDS | Prevents creating or restoring an RDS or Aurora instance or cluster unless storage encryption is enabled | Enforces at-rest encryption across create and restore paths. |
 
-This module includes the following SCPs: 
-| Service     | SCP Name    | Effect | Implementation Reasoning|
-| ----------- | ----------- | ------ | ----------------------- | 
-| EC2         | RequireIMDSv2 | Prevents EC2 instances from being created unless `ec2:MetadataHttpTokens` is required | IMDSv1 comes with security risks through which attackers are able to steal temporary credentials that are available via the instance metadata service. This is only applicable if there is an ssrf vulnerability in the application. IMDSv2 is the more secure version of metadata service that mitigates the risk posed by v1. 
-| EC2         | DenyIMDSChanges | Prevents modifying EC2 instance metadata options | In conjunction with requiring IMDSv2, this statement ensures that the IMDS configuration can’t be changed to enable IMDSv1. This will lock the EC2 metadata options as they are, so check out https://latacora.micro.blog/2021/08/11/remediating-aws-imdsv.html to learn more about this issue before deployment. 
-| EC2         | RequireEBSEncryption | Prevents creating EC2 volumes unless encryption is enabled | Enabling encryption of EBS volumes ensures that data is encrypted both at-rest and in-transit, specifically between an instance and its attached EBS storage. This may prevent an attacker that gains access to the underlying physical storage systems where this data is hosted from accessing the data associated with the instance. Encryption of this data may also be a requirement in certain compliance regimes.
-| S3          | RequireObjectEncryption | Prevents adding objects to S3 buckets unless the objects have encryption enabled | Enabling encryption of S3 objects ensures that data-at-rest is protected. Even if an attacker gains physical access to the underlying storage system that hosts the data for the S3 bucket, encrypted objects would still require a key to be decrypted. One of the primary reasons to enable encryption at-rest in S3 is to meet the requirements of different compliance regimes. 
-| S3          | DenyPublicAccesstoS3Buckets | Prevents changes to the Block Public Access S3 setting | The Block Public Access setting is a preventative measure to stop users from accidentally creating public S3 buckets (via ACLs or IAM policies). It can be configured either at the AWS Account level, or for individual buckets. By default, no block is enforced. It is recommended to enable this feature at the Account level for all Accounts within your Organization, and to implement this SCP to prevent any changes to the setting. When a bucket needs to be made public, a temporary exception should be configured to the policy while the change is being made.
-| S3          | RequireS3BucketHTTPS | Deny any S3 API request where aws:SecureTransport is set to false | If HTTPS is not enforced, communication between clients and S3 buckets may not be encrypted in transit and is vulnerable to eavesdropping and man-in-the-middle attacks. This SCP prevents unencrypted HTTP requests for S3 buckets in order to protect information from being transmitted over cleartext. 
-| RDS         | RequireRDSEncryption | Prevents creating an RDS database instance or cluster unless encryption is enabled for the database storage volumes | Enabling encryption of RDS instance volumes ensures that data is encrypted at rest. This may prevent an attacker that gains access to the underlying physical storage systems where this data is hosted from accessing the data associated with the instance. Encryption of this data may also be a requirement in certain compliance regimes.
+##### EBS encryption
 
-### IG 3 - Specialized SCPs
+We recommend enforcing EBS encryption wherever possible. Roll it out in this order:
 
-These policies will be specific to the needs to the environment. For now, we will not be releasing these as they require more input and surrounding infrastucture. You can expect them in the future.
+1. Turn on [EBS encryption by default](https://docs.aws.amazon.com/ebs/latest/userguide/encryption-by-default.html) in every account and region you use, for example with `aws_ebs_encryption_by_default`. It's a per-region setting, and EC2 declarative policies don't support it.
+2. Attach the policy with `RequireEBSEncryption` and `DenyEbsEncryptionByDefaultChanges`. If you do this first, launches from AMIs with unencrypted snapshots fail.
+
+Things to plan for:
+
+- Only instance types that support EBS encryption can be launched. All current-generation types do; some older previous-generation types don't.
+- Snapshots and AMIs encrypted with the AWS-managed `aws/ebs` key can't be shared with other accounts. To share them, use a customer-managed KMS key as the default, and make sure its key policy allows the roles that launch instances, such as the Auto Scaling service-linked role.
+- Encryption by default only applies to new volumes. Existing unencrypted volumes stay as they are.
+- Test launches from your existing AMIs and launch templates in a non-production account before rolling out.
+
+#### Governance Best Practices
+
+Broad, org-wide guardrails that are governance-oriented rather than directly security-related.
+
+| Service | SCP Statement | Effect | Implementation Reasoning |
+| --- | --- | --- | --- |
+| Global | EnabledRegions | Denies API calls outside the specified regions | Takes a list of allowed regions and blocks everything else. Global services (IAM, CloudFront, Route53, STS, etc.) are exempted, as is the `AWSControlTowerExecution` role. |
 
 ### Deployment
 
-We have created this Terraform repository in order to speed up the deployment process of these SCPs. 
+Terraform version: 1.1.0 or later (for `moved` blocks).
 
-Terraform Version: 1.0.0
+#### Usage
 
-##### [Required Variables](/variables.tf)
+Consume this repo as a Terraform module, pinned to the commit SHA of a release tag. Keep the tag in a comment so readers and reviewers can see which release it is:
 
-* `target_ou_id`: What OU are you attaching the SCPs to?  
-* `enabled_regions`: A list of regions that you want to allow resources to be deployed in. For example: `["us-east-1", "us-west-2"]`  
+```hcl
+module "scps" {
+  # v1.0.0
+  source = "git::https://github.com/latacora/latacora-service-control-policies.git?ref=<full-40-char-sha-of-v1.0.0>"
 
-##### Disabling policy statement
+  security_policy_target_ids       = ["r-abcd"]
+  infrastructure_policy_target_ids = ["ou-abcd-workloads"]
+  governance_policy_target_ids     = ["r-abcd"]
 
-In order to disable specific policy statements in the SCP, change the default type in the variables.tf file inside the [security](/policy-groups/security-best-practices/variables.tf) or [infrastructure](/policy-groups/infrastructure-best-practices/variables.tf) folders from `true` to `false` in the variable block associated with the policy statement that needs to be disabled. 
+  enabled_regions = ["us-east-1", "us-west-2"]
+}
+```
 
-This is also how you can temporarily disable policy statements. Change a variable to false, redeploy, make the needed changes, change to true, deploy again. (Such as disabling the `deny_imds_change` policy in order to change your instances from using imds v1 to v2)
+#### Versions and pinning
 
-##### Running the deployment
+Releases use [semantic versioning](https://semver.org/) and are listed on the [releases page](https://github.com/latacora/latacora-service-control-policies/releases) and in [`CHANGELOG.md`](/CHANGELOG.md):
 
-Steps:
+- **Major** (`v2.0.0`): changes you must act on, such as renamed variables, new required inputs, or `moved` blocks you need to add.
+- **Minor** (`v1.1.0`): new statements or stricter conditions. These can deny actions that were allowed before, so read the changelog and review the plan before upgrading.
+- **Patch** (`v1.0.1`): fixes that make existing statements work as documented.
 
-* It is recommended to run `terraform plan` before applying and check over the output to verify it is what you expect.
-* To deploy all policy groups to the target SCP, run: `terraform apply` in the root directory of the repository and enter in the required variables listed above.  
-* To deploy a single policy group, you can use terraform targeting. For example: `terraform apply --target=module.security_scp`
-* If you would like to remove all SCPs, run `terraform destroy` Similarly for targeted modules `terraform destroy --target=module.security_scp`
+Pick a release by its version, then pin to that release's commit SHA rather than the tag name. Each release's notes list its SHA, or you can look it up:
 
-Note: This comes with the assumption that you have valid AWS credentials to the Management account where SCPs are managed. It also assumes you know a bit about terraform and storing state, but in the case of this module it's all SCP related so not too bad if you have to destroy things if the state gets lost. 
+```sh
+gh api repos/latacora/latacora-service-control-policies/commits/v1.0.0 --jq .sha
+# or, without the GitHub CLI (use the line ending in ^{} if there is one):
+git ls-remote --tags https://github.com/latacora/latacora-service-control-policies.git 'v1.0.0*'
+```
+
+Why a SHA rather than the tag or a branch:
+
+- SCPs are high-blast-radius controls; an unreviewed change here can break production or weaken guardrails.
+- A branch changes on every push. A tag can be moved to a different commit, so `?ref=v1.0.0` isn't guaranteed to fetch the same code tomorrow. A SHA can only ever mean one commit.
+- With a SHA pin, every upgrade is an explicit, reviewable change: pick the new release, update the SHA and the version comment, run `terraform plan`, review the diff, merge.
+
+#### Required / notable variables
+
+Defined in [`variables.tf`](/variables.tf):
+
+- `security_policy_target_ids` — list of organization roots, OUs, or accounts to attach `security-policy` to
+- `infrastructure_policy_target_ids` — targets for `infrastructure-policy`
+- `governance_policy_target_ids` — targets for `governance-policy`
+- `enabled_regions` — **required.** List of allowed regions for the governance region-deny policy. There is no default, so you have to choose your regions; include `us-east-1` to avoid locking out global-service endpoints.
+- `enable_security_policy`, `enable_infrastructure_policy`, `enable_governance_policy` — bool toggles for each module (all default to `true`)
+
+Each target list is independent, so you can (for example) attach the security and governance SCPs to the entire org root while scoping the infrastructure SCP to a workload OU:
+
+```hcl
+security_policy_target_ids        = ["r-abcd"]
+governance_policy_target_ids      = ["r-abcd"]
+infrastructure_policy_target_ids  = ["ou-abcd-workloads"]
+```
+
+#### Disabling individual statements
+
+Each module has per-statement bool variables in its `variables.tf` (e.g. `deny_cloudtrail_changes`, `require_imdsv2`). Flip one to `false` to drop that statement from the compiled policy. This is also the mechanism for temporarily disabling a control — set false, apply, make the change, set true, apply again. (For example, disabling `deny_imds_change` while migrating instances from IMDSv1 to v2.)
+
+These variables are on the policy-group modules, not the root module. To set them, call the policy-group module directly, e.g. `source = "git::https://github.com/latacora/latacora-service-control-policies.git//policy-groups/security-best-practices?ref=<release-sha>"`, pinned the same way as above.
+
+#### Deployment
+
+- Run `terraform plan` first and review the output.
+- `terraform apply` deploys all enabled modules.
+- To deploy a single policy group: `terraform apply --target=module.security_scp` (or `.infrastructure_scp`, or `.governance_scp`).
+- To remove: `terraform destroy` (or `--target=...` for a single module).
+
+Note: This assumes valid AWS credentials for the management account (where SCPs are managed) and basic familiarity with Terraform and state management. Since everything in this module is SCP configuration, losing state is recoverable.
+
+#### Upgrading from the two-module layout
+
+Previous versions had two modules — `security_scp` and `infrastructure_scp` — each taking a single `target_ou_id` string. The current layout adds the `governance_scp` module (region deny, previously embedded in the security policy) and switches each module's attachment from a single `target_ou_id` to a `target_ids` list attached via `for_each`.
+
+Resources in each module are now named after their policy group:
+
+| Module | Old address (inside the module) | New address |
+| --- | --- | --- |
+| `security_scp` | `aws_organizations_policy.security_hardened_policy` | `aws_organizations_policy.security` |
+| `security_scp` | `aws_organizations_policy_attachment.policy_attachment` | `aws_organizations_policy_attachment.security["<target-id>"]` |
+| `infrastructure_scp` | `aws_organizations_policy.infrastructure_hardened_policy` | `aws_organizations_policy.infrastructure` |
+| `infrastructure_scp` | `aws_organizations_policy_attachment.policy_attachment` | `aws_organizations_policy_attachment.infrastructure["<target-id>"]` |
+| `governance_scp` | (new) | `aws_organizations_policy.governance`, `aws_organizations_policy_attachment.governance["<target-id>"]` |
+
+The policy renames are handled by `moved` blocks shipped in each module, so no action is needed for them. The `aws_iam_policy_document` data sources were also renamed, but data sources are re-read on every plan and don't need `moved` blocks.
+
+**Attachments need a `moved` block in your root config.** Each attachment is now created with `for_each`, keyed by target ID. The key comes from your input, so the module can't ship a `moved` block for it. Without one, Terraform destroys the old attachment before creating the new one, which leaves that SCP detached (and its denies unenforced) for the length of the apply. Add one `moved` block per module you had attached, keyed by the ID you used to pass as `target_ou_id`. Adjust `module.scps` to whatever you named the module in your config:
+
+```hcl
+moved {
+  from = module.scps.module.security_scp[0].aws_organizations_policy_attachment.policy_attachment
+  to   = module.scps.module.security_scp[0].aws_organizations_policy_attachment.security["r-abcd"]
+}
+
+moved {
+  from = module.scps.module.infrastructure_scp[0].aws_organizations_policy_attachment.policy_attachment
+  to   = module.scps.module.infrastructure_scp[0].aws_organizations_policy_attachment.infrastructure["ou-abcd-workloads"]
+}
+```
+
+The governance module is new, so it needs no `moved` block.
+
+You will also need to update your root config: replace each module's `target_ou_id = "..."` with `*_policy_target_ids = ["..."]`, and set `governance_policy_target_ids` to the targets your security policy was attached to. The region deny has moved to `governance-policy`, and that policy is only attached to the targets you list. If you leave it empty, the plan removes the region deny from `security-policy` without attaching it anywhere, and nothing shows as destroyed.
+
+Before applying, check the plan:
+
+- The policies and existing attachments should show as moved, not destroyed. Any `destroy` on an `aws_organizations_policy_attachment` means a `moved` block is missing or has the wrong key.
+- `governance-policy` should have an attachment for each target that should keep the region deny.
+- If you used the region deny, it moves from `security-policy` to the new `governance-policy`. Both changes happen in the same apply, so there can be a short window where neither policy has it. To avoid that, apply the governance module first (`terraform apply -target=module.scps.module.governance_scp`), then run a full apply.
+
+#### Behavior changes in v1.0.0
+
+Besides the layout change, these change what the policies allow or deny compared with the last two-module version. Review them against your environment before applying:
+
+- `RestrictMemberAccountRootUsers` no longer denies [centralized root access](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-enable-root-access.html) sessions (`sts:AssumeRoot`).
+- `RequireEBSEncryption` now also covers volumes created by `RunInstances`, including root volumes from AMIs with unencrypted snapshots. Turn on EBS encryption by default in each account and region first, or launches from those AMIs will fail.
+- New statement: `DenyEbsEncryptionByDefaultChanges`.
+- `DenyCloudtrailChanges` also denies `cloudtrail:PutEventSelectors` and `cloudtrail:PutInsightSelectors`.
+- `DenyBillingChanges` and `DenyAccountChanges` replace the legacy `aws-portal:*` actions with the current billing, payments, tax, invoicing and account actions, and now also deny region opt-in changes and contact and primary-email updates in member accounts.
+
+#### SCP size limit
+
+AWS Organizations allows up to [10,240 characters per SCP](https://docs.aws.amazon.com/organizations/latest/userguide/org_troubleshoot_policies.html), and when a policy is created through the API, whitespace counts. Splitting along security / infrastructure / governance lines keeps each policy well under that and makes intent explicit, leaving plenty of headroom to add statements.
 
 ### References
-Although these are the Latacora recommended SCPs, we did not come up with them all alone. We used resources available on blogs, documentation sites, and AWS official user guides to craft our recommendations. There are many more SCPs available linked below and we encourage you to check them out.  
-* https://cloudsecdocs.com/aws/devops/resources/scps/
-* https://asecure.cloud/p/scp_package/
-* https://summitroute.com/blog/2020/03/25/aws_scp_best_practices/
-* https://github.com/ScaleSec/terraform_aws_scp/tree/main/security_controls_scp
-* https://github.com/trussworks/terraform-aws-ou-scp
-* https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps_examples.html
+
+Although these are the Latacora recommended SCPs, we did not come up with them all alone. We used resources available on blogs, documentation sites, and AWS official user guides to craft our recommendations.
+
+- https://cloudsecdocs.com/aws/devops/resources/scps/
+- https://asecure.cloud/p/scp_package/
+- https://summitroute.com/blog/2020/03/25/aws_scp_best_practices/
+- https://github.com/ScaleSec/terraform_aws_scp/tree/main/security_controls_scp
+- https://github.com/trussworks/terraform-aws-ou-scp
+- https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps_examples.html
+- https://docs.aws.amazon.com/controltower/latest/controlreference/primary-region-deny-policy.html
 
 ### Feedback
 
-Feedback is always welcome. If you run into issues feel free to open a GitHub issue and we will take a look.
+Feedback is always welcome. If you run into issues, please open a GitHub issue and we'll take a look!

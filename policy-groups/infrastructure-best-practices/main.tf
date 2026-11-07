@@ -1,4 +1,4 @@
-data "aws_iam_policy_document" "combined_policy_block" {
+data "aws_iam_policy_document" "infrastructure" {
   dynamic "statement" {
     for_each = var.require_imdsv2 ? [1] : []
 
@@ -31,16 +31,29 @@ data "aws_iam_policy_document" "combined_policy_block" {
     for_each = var.require_ebs_encryption ? [1] : []
 
     content {
-      sid       = "RequireEBSEncryption"
-      effect    = "Deny"
-      actions   = ["ec2:CreateVolume", ]
-      resources = ["*"]
+      sid    = "RequireEBSEncryption"
+      effect = "Deny"
+      # RunInstances creates root and block-device-mapping volumes without
+      # calling CreateVolume, so both actions are needed.
+      actions   = ["ec2:CreateVolume", "ec2:RunInstances"]
+      resources = ["arn:aws:ec2:*:*:volume/*"]
 
       condition {
         test     = "Bool"
         variable = "ec2:Encrypted"
         values   = [false]
       }
+    }
+  }
+
+  dynamic "statement" {
+    for_each = var.deny_ebs_encryption_by_default_changes ? [1] : []
+
+    content {
+      sid       = "DenyEbsEncryptionByDefaultChanges"
+      effect    = "Deny"
+      actions   = ["ec2:DisableEbsEncryptionByDefault"]
+      resources = ["*"]
     }
   }
 
@@ -105,14 +118,14 @@ data "aws_iam_policy_document" "combined_policy_block" {
   }
 }
 
-resource "aws_organizations_policy" "infrastructure_hardened_policy" {
+resource "aws_organizations_policy" "infrastructure" {
   name        = "infrastructure-policy"
   description = "This policy contains controls to ensure hardening of AWS Infrastructure"
-  content     = data.aws_iam_policy_document.combined_policy_block.json
-
+  content     = data.aws_iam_policy_document.infrastructure.json
 }
 
-resource "aws_organizations_policy_attachment" "policy_attachment" {
-  policy_id = aws_organizations_policy.infrastructure_hardened_policy.id
-  target_id = var.target_ou_id
+resource "aws_organizations_policy_attachment" "infrastructure" {
+  for_each  = toset(var.target_ids)
+  policy_id = aws_organizations_policy.infrastructure.id
+  target_id = each.value
 }

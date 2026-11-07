@@ -1,6 +1,6 @@
-variable "target_ou_id" {
-  description = "id of the organization unit to attach the policy to"
-  type        = string
+variable "target_ids" {
+  description = "IDs of the targets (organization roots, OUs, or accounts) to attach the policy to"
+  type        = list(string)
 }
 
 variable "require_imdsv2" {
@@ -17,6 +17,12 @@ variable "deny_imds_change" {
 
 variable "require_ebs_encryption" {
   description = "Requires EBS volumes and snapshots to be encrypted"
+  default     = true
+  type        = bool
+}
+
+variable "deny_ebs_encryption_by_default_changes" {
+  description = "Denies disabling EBS encryption by default"
   default     = true
   type        = bool
 }
