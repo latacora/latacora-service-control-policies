@@ -17,7 +17,6 @@ see "Upgrading from the two-module layout" in the README.
 - `target_ou_id` is replaced by `security_policy_target_ids`,
   `infrastructure_policy_target_ids` and `governance_policy_target_ids`,
   so each policy can be attached to multiple roots, OUs or accounts.
-- `enabled_regions` is required and no longer defaults to `["us-east-1"]`.
 - Resources are renamed after their policy group. The module's `moved`
   blocks handle the policies; attachments need a `moved` block in your root
   config (see the README).
@@ -39,5 +38,4 @@ see "Upgrading from the two-module layout" in the README.
   `cloudtrail:PutInsightSelectors`.
 - `DenyAccountChanges` also denies region opt-in changes and contact and
   primary-email updates in member accounts.
-- The region deny also exempts `discovery-marketplace:*` and
-  `wellarchitected:*`.
+- The region deny also exempts `quicksight:DescribeAccountSubscription`.

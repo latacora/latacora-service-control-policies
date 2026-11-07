@@ -36,11 +36,25 @@ This set of SCPs ensures that infrastructure created in the account meets best p
 | --- | --- | --- | --- |
 | EC2 | RequireIMDSv2 | Prevents EC2 instances from being created unless `ec2:MetadataHttpTokens` is required | IMDSv1 allows an SSRF-vulnerable app to steal instance credentials from the metadata service. IMDSv2 mitigates that risk. |
 | EC2 | DenyIMDSChanges | Prevents modifying EC2 instance metadata options | Paired with RequireIMDSv2 so the configuration cannot be downgraded to v1. See [our blog post on IMDSv1](https://www.latacora.com/blog/2021/08/11/remediating-aws-imdsv1/) before enabling. |
-| EC2 | RequireEBSEncryption | Prevents creating unencrypted EBS volumes, either directly or when launching an instance (including root volumes from unencrypted AMIs) | Encrypts data at rest and in transit between an instance and its EBS volumes. Pair with [EBS encryption by default](https://docs.aws.amazon.com/ebs/latest/userguide/encryption-by-default.html) in each region, and test launches from existing AMIs and launch templates in a non-production account before rolling out. |
+| EC2 | RequireEBSEncryption | Prevents creating unencrypted EBS volumes, either directly or when launching an instance (including root volumes from unencrypted AMIs) | Encrypts data at rest and in transit between an instance and its EBS volumes. See [EBS encryption](#ebs-encryption) below before enabling. |
 | EC2 | DenyEbsEncryptionByDefaultChanges | Prevents disabling EBS encryption by default | EBS encryption by default is a per-account, per-region setting that EC2 declarative policies don't support, so enable it in each account and region first (e.g. with `aws_ebs_encryption_by_default`). This SCP keeps it from being switched off. |
 | S3 | RequireS3BucketHTTPS | Denies any S3 API request where `aws:SecureTransport` is false | Forces TLS; prevents eavesdropping and MITM on S3 traffic. |
 | S3 | DenyPublicAccesstoS3Buckets | Prevents modifying the S3 Account-level Public Access Block | Preserves a safe default against accidental public buckets. |
 | RDS | DenyUnencryptedRDS | Prevents creating or restoring an RDS or Aurora instance or cluster unless storage encryption is enabled | Enforces at-rest encryption across create and restore paths. |
+
+##### EBS encryption
+
+We recommend enforcing EBS encryption wherever possible. Roll it out in this order:
+
+1. Turn on [EBS encryption by default](https://docs.aws.amazon.com/ebs/latest/userguide/encryption-by-default.html) in every account and region you use, for example with `aws_ebs_encryption_by_default`. It's a per-region setting, and EC2 declarative policies don't support it.
+2. Attach the policy with `RequireEBSEncryption` and `DenyEbsEncryptionByDefaultChanges`. If you do this first, launches from AMIs with unencrypted snapshots fail.
+
+Things to plan for:
+
+- Only instance types that support EBS encryption can be launched. All current-generation types do; some older previous-generation types don't.
+- Snapshots and AMIs encrypted with the AWS-managed `aws/ebs` key can't be shared with other accounts. To share them, use a customer-managed KMS key as the default, and make sure its key policy allows the roles that launch instances, such as the Auto Scaling service-linked role.
+- Encryption by default only applies to new volumes. Existing unencrypted volumes stay as they are.
+- Test launches from your existing AMIs and launch templates in a non-production account before rolling out.
 
 #### Governance Best Practices
 
@@ -158,11 +172,12 @@ moved {
 
 The governance module is new, so it needs no `moved` block.
 
-You will also need to update your root config: replace each module's `target_ou_id = "..."` with `*_policy_target_ids = ["..."]`, and (if region-deny was in use) add `governance_policy_target_ids` plus `enabled_regions`.
+You will also need to update your root config: replace each module's `target_ou_id = "..."` with `*_policy_target_ids = ["..."]`, and set `governance_policy_target_ids` to the targets your security policy was attached to. The region deny has moved to `governance-policy`, and that policy is only attached to the targets you list. If you leave it empty, the plan removes the region deny from `security-policy` without attaching it anywhere, and nothing shows as destroyed.
 
 Before applying, check the plan:
 
 - The policies and existing attachments should show as moved, not destroyed. Any `destroy` on an `aws_organizations_policy_attachment` means a `moved` block is missing or has the wrong key.
+- `governance-policy` should have an attachment for each target that should keep the region deny.
 - If you used the region deny, it moves from `security-policy` to the new `governance-policy`. Both changes happen in the same apply, so there can be a short window where neither policy has it. To avoid that, apply the governance module first (`terraform apply -target=module.scps.module.governance_scp`), then run a full apply.
 
 #### Behavior changes in v1.0.0
